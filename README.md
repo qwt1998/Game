@@ -4,8 +4,11 @@
 
 ## 怎么玩
 
-- **在线玩**：打开 Claude 上的版本 <https://claude.ai/artifact/FTjmnJ6vQMNN4nr5QSYrYA>（只有你自己能打开，分享要在页面右上角 Share 里设置）
+- **在线玩（可以直接分享）**：<https://qwt1998.github.io/Game/> ，任何人点开就能玩，不用登录
+- **Claude 上的版本**：<https://claude.ai/artifact/FTjmnJ6vQMNN4nr5QSYrYA>（默认只有自己能打开）
 - **本地玩**：下载 `index.html`，双击用浏览器打开就行，不需要安装任何东西
+
+每次把新版本推到 `main` 分支，在线链接会在 1～2 分钟内自动更新。
 
 电脑：方向键 / WASD 转向，空格刹车，P 暂停，M 静音
 手机：在地图上滑动转向，或用下方按键

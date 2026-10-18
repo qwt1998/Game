@@ -7,6 +7,12 @@
 - 单文件游戏：`index.html`，原生 HTML/CSS/JS，无构建步骤、无依赖。唯一外部资源是 Google Fonts（加载失败有系统字体兜底）。
 - 所有画面用 Canvas 2D 绘制；所有声音用 Web Audio 实时合成，不要引入图片或音频文件。
 
+## 发布
+
+- 仓库是公开的，`main` 分支根目录通过 GitHub Pages 发布到 <https://qwt1998.github.io/Game/>，推送后自动更新。
+- Claude 上还有一份同样的版本，改完后让 Claude 用 `index.html` 更新那个链接，两边保持一致。
+- 仓库公开，不要往里放密码、密钥或个人信息。
+
 ## 必须保持的约定
 
 - **文件开头那一行外壳不要改**：`<!doctype html><html><head>…<style>…</style></head><body>` 到 `</body></html>` 是 Claude Artifact 的固定格式。保持原样，Claude 才能把这个文件直接发布回同一个链接：<https://claude.ai/artifact/FTjmnJ6vQMNN4nr5QSYrYA>
