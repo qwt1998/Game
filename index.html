@@ -1664,7 +1664,7 @@ function resize(){
   const wrap=$('mapWrap'),w=wrap.clientWidth-10,h=wrap.clientHeight-10;
   const nt=Math.max(10,Math.floor(Math.min(w/W,h/H)));
   const nd=Math.min(3,window.devicePixelRatio||1);
-  if(nt!==T||nd!==dpr||!canvas.width){
+  if(nt!==T||nd!==dpr||!canvas.style.width){
     T=nt;dpr=nd;
     canvas.width=Math.round(W*T*dpr);canvas.height=Math.round(H*T*dpr);
     canvas.style.width=W*T+'px';canvas.style.height=H*T+'px';
