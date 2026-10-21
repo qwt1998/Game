@@ -28,75 +28,106 @@ a{display:inline-block;margin-right:12px;color:inherit}
 </main>
 <script>
 // The whole icon is drawn on a 512×512 grid and scaled to any size.
-// Everything that matters stays inside the central circle so Android's round masks don't cut it off.
+// The rider and the orders stay inside the central circle so Android's round masks don't cut them off.
 const INK='#1F2A3A',LW=9;
 
 function drawIcon(g,size){
   g.save();g.scale(size/512,size/512);
   g.lineJoin='round';g.lineCap='round';
 
-  const bg=g.createLinearGradient(0,0,0,512);bg.addColorStop(0,'#FFD85E');bg.addColorStop(1,'#FFA62B');
+  // hot background: orange-red where the rider came from, bright yellow ahead
+  const bg=g.createLinearGradient(0,512,512,0);
+  bg.addColorStop(0,'#FF5A2C');bg.addColorStop(.5,'#FF9330');bg.addColorStop(1,'#FFD84F');
   g.fillStyle=bg;g.fillRect(0,0,512,512);
-  g.fillStyle='rgba(255,255,255,.28)';circle(g,300,250,170);g.fill();
 
-  // ground shadow and speed lines
-  g.fillStyle='rgba(150,70,0,.2)';g.beginPath();g.ellipse(292,428,165,13,0,0,Math.PI*2);g.fill();
-  g.strokeStyle='rgba(255,255,255,.9)';g.lineWidth=11;
-  [[52,336,128],[30,372,120],[64,408,136]].forEach(function(s){g.beginPath();g.moveTo(s[0],s[1]);g.lineTo(s[2],s[1]);g.stroke();});
+  // speed streaks across the back half: [x, y, length, width, opacity]
+  [[0,70,150,10,.45],[40,118,120,8,.35],[0,200,96,12,.6],[0,250,70,9,.5],[0,300,170,14,.85],
+   [20,336,130,10,.7],[0,374,150,16,.9],[46,412,120,10,.75],[0,452,210,12,.55],[230,470,120,8,.4]]
+  .forEach(function(s){g.strokeStyle='rgba(255,255,255,'+s[4]+')';g.lineWidth=s[3];g.beginPath();g.moveTo(s[0],s[1]);g.lineTo(s[0]+s[2],s[1]);g.stroke();});
+
+  // ground shadow and dust kicked up by the rear wheel
+  g.fillStyle='rgba(140,40,0,.22)';g.beginPath();g.ellipse(300,432,160,12,0,0,Math.PI*2);g.fill();
+  g.fillStyle='rgba(255,248,232,.92)';
+  [[136,420,22],[104,406,17],[80,424,13],[112,432,12],[58,410,9]].forEach(function(d){circle(g,d[0],d[1],d[2]);g.fill();});
 
   trail(g);
 
-  // wheels
+  // the whole scooter leans forward like it's flooring it, front wheel lifting
+  g.save();g.translate(204,428);g.rotate(-0.13);g.translate(-196,-428);
+  scooter(g);
+  g.restore();
+
+  g.restore();
+}
+
+function scooter(g){
   wheel(g,196,382);wheel(g,398,382);
   // front fork and fender
   limb(g,[[392,300],[398,382]],12,'#C9D2DB');
   g.lineWidth=16+LW*2;g.strokeStyle=INK;g.beginPath();g.arc(398,382,56,Math.PI*1.12,Math.PI*1.86);g.stroke();
   g.lineWidth=16;g.strokeStyle='#F4F6F8';g.beginPath();g.arc(398,382,56,Math.PI*1.12,Math.PI*1.86);g.stroke();
-
-  // scooter body: rear panel, floorboard and steering column in one piece
+  // body: rear panel, floorboard and steering column in one piece
   shape(g,function(){
     g.moveTo(140,370);g.lineTo(150,326);g.quadraticCurveTo(160,300,204,298);g.lineTo(318,298);
     g.quadraticCurveTo(340,300,342,324);g.lineTo(344,344);g.lineTo(362,344);g.lineTo(380,256);g.lineTo(406,256);
     g.lineTo(390,344);g.quadraticCurveTo(386,370,362,370);g.closePath();
   },'#F4F6F8');
   g.fillStyle='#D5DDE5';g.beginPath();g.moveTo(152,352);g.lineTo(336,352);g.lineTo(338,364);g.lineTo(148,364);g.closePath();g.fill();
-  // headlight and handlebar
+  // headlight with its beam, handlebar
+  g.fillStyle='rgba(255,250,210,.55)';g.beginPath();g.moveTo(414,276);g.lineTo(512,246);g.lineTo(512,318);g.lineTo(414,292);g.closePath();g.fill();
   g.fillStyle='#FFE58A';circle(g,412,284,12);g.fill();g.lineWidth=LW*.8;g.strokeStyle=INK;g.stroke();
   limb(g,[[386,254],[430,240]],12,INK);
 
-  // delivery box on the rear rack
+  // delivery box with a ringing stopwatch on it
   limb(g,[[134,292],[248,292]],8,INK);
   shape(g,function(){rr(g,120,166,124,122,18);},'#F2603E');
   g.fillStyle='#FF8D5E';g.save();rr(g,120,166,124,122,18);g.clip();g.fillRect(120,166,124,30);g.restore();
   g.lineWidth=LW;g.strokeStyle=INK;rr(g,120,166,124,122,18);g.stroke();
   g.beginPath();g.moveTo(124,196);g.lineTo(240,196);g.stroke();
-  g.fillStyle='#FFFFFF';rr(g,146,224,72,16,8);g.fill();
+  stopwatch(g,182,244,30);
   // seat
   shape(g,function(){rr(g,222,280,104,22,11);},'#2B3A4B');
 
-  // rider: leg, body, arm, helmet
+  // rider: crouched low over the bars, scarf flying back
   limb(g,[[288,284],[344,288],[352,338]],30,'#3A4A60');
   shape(g,function(){rr(g,336,330,42,16,8);},INK);
-  limb(g,[[290,268],[322,210]],54,'#2F6FDF');
-  g.strokeStyle='#FFE58A';g.lineWidth=8;g.beginPath();g.moveTo(286,236);g.lineTo(326,252);g.stroke();
-  limb(g,[[328,214],[364,238],[398,248]],22,'#2F6FDF');
+  shape(g,function(){
+    g.moveTo(326,206);g.quadraticCurveTo(296,186,268,196);g.quadraticCurveTo(250,202,232,186);
+    g.lineTo(238,208);g.quadraticCurveTo(254,224,276,214);g.quadraticCurveTo(298,206,320,222);g.closePath();
+  },'#FFE15A');
+  limb(g,[[292,270],[330,214]],54,'#2F6FDF');
+  g.strokeStyle='#FFE58A';g.lineWidth=8;g.beginPath();g.moveTo(290,236);g.lineTo(330,254);g.stroke();
+  limb(g,[[334,218],[368,240],[398,248]],22,'#2F6FDF');
   g.fillStyle='#F2D2B6';circle(g,402,248,11);g.fill();g.lineWidth=LW*.8;g.strokeStyle=INK;g.stroke();
-  helmet(g,336,166,38);
-  // effort lines behind the helmet
-  g.strokeStyle='#FFFFFF';g.lineWidth=8;
-  [[262,150,288,148],[256,176,284,178]].forEach(function(s){g.beginPath();g.moveTo(s[0],s[1]);g.lineTo(s[2],s[3]);g.stroke();});
+  helmet(g,346,172,38);
+  // sweat flying off the helmet
+  drop(g,300,124,-.9,11);drop(g,282,148,-1.2,8);
+}
 
+function stopwatch(g,x,y,r){
+  shape(g,function(){rr(g,x-7,y-r-14,14,12,3);},'#FFFFFF');
+  shape(g,function(){circle(g,x,y,r);},'#FFFFFF');
+  g.strokeStyle=INK;g.lineWidth=6;
+  g.beginPath();g.moveTo(x,y);g.lineTo(x,y-r*.62);g.stroke();
+  g.strokeStyle='#E8434A';g.beginPath();g.moveTo(x,y);g.lineTo(x+r*.55,y+r*.2);g.stroke();
+  g.fillStyle=INK;circle(g,x,y,4.5);g.fill();
+  // ringing marks on both shoulders
+  g.strokeStyle='#FFFFFF';g.lineWidth=6;
+  [[1.12,1.38],[1.62,1.88]].forEach(function(a){g.beginPath();g.arc(x,y,r+12,Math.PI*a[0],Math.PI*a[1]);g.stroke();});
+}
+function drop(g,x,y,rot,s){
+  g.save();g.translate(x,y);g.rotate(rot);
+  shape(g,function(){g.moveTo(0,-s*1.6);g.quadraticCurveTo(s,-s*.2,s,s*.3);g.arc(0,s*.3,s,0,Math.PI);g.quadraticCurveTo(-s,-s*.2,0,-s*1.6);},'#BFE8FF');
   g.restore();
 }
 
-// Takeout orders flying after the rider
+// Orders blown back by the wind, each with its own little speed streaks
 function trail(g){
-  g.strokeStyle='rgba(255,255,255,.85)';g.lineWidth=7;g.setLineDash([14,14]);
-  g.beginPath();g.moveTo(116,250);g.quadraticCurveTo(112,140,232,104);g.stroke();g.setLineDash([]);
-  item(g,218,100,-.18,tea);
-  item(g,136,116,-.12,bag);
-  item(g,80,184,.12,noodles);
-  item(g,70,266,-.08,burger);
+  [[218,92,-.42,tea],[134,104,-.3,bag],[72,176,-.22,noodles],[60,258,-.32,burger]].forEach(function(t){
+    g.strokeStyle='rgba(255,255,255,.85)';g.lineWidth=6;
+    [-18,2,20].forEach(function(o,i){g.beginPath();g.moveTo(t[0]-46-(i%2)*10,t[1]+o);g.lineTo(t[0]-30,t[1]+o);g.stroke();});
+    item(g,t[0],t[1],t[2],t[3]);
+  });
 }
 function item(g,x,y,rot,draw){g.save();g.translate(x,y);g.rotate(rot);draw(g);g.restore();}
 function tea(g){
@@ -127,9 +158,12 @@ function burger(g){
   g.fillStyle='#FFF4D6';[[-10,-20],[4,-24],[14,-16]].forEach(function(p){circle(g,p[0],p[1],2.5);g.fill();});
 }
 
+// Spinning wheel: tyre, blurred streaks, rim
 function wheel(g,x,y){
   g.fillStyle=INK;circle(g,x,y,44);g.fill();
-  g.fillStyle='#E6EBF0';circle(g,x,y,21);g.fill();
+  g.strokeStyle='rgba(255,255,255,.45)';g.lineWidth=5;
+  [0,1].forEach(function(i){g.beginPath();g.arc(x,y,33,i*Math.PI+.3,i*Math.PI+1.5);g.stroke();});
+  g.fillStyle='#E6EBF0';circle(g,x,y,19);g.fill();
   g.fillStyle=INK;circle(g,x,y,8);g.fill();
 }
 function helmet(g,x,y,r){
