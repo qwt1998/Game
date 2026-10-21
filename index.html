@@ -203,6 +203,51 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
   #money{font-size:20px}
   .card h1{font-size:32px}
 }
+/* Phone held sideways: map in the middle at full height, steering keys bottom-left, brake bottom-right */
+@media (orientation:landscape) and (max-height:500px) and (pointer:coarse){
+  body{padding-block:8px}
+  .app{
+    --pd:clamp(44px,14vh,58px);--side-min:170px;
+    gap:8px;
+    grid-template-columns:repeat(3,minmax(var(--pd),1fr)) auto minmax(0,3fr);
+    grid-template-rows:auto minmax(0,1fr) repeat(3,var(--pd));
+    grid-template-areas:
+      "hud  hud  hud   map orders"
+      ".    .    .     map orders"
+      ".    up   .     map orders"
+      "left .    right map orders"
+      ".    down .     map brake";
+  }
+  .hud{display:grid;grid-template-columns:auto minmax(0,1fr) 34px 34px;grid-template-areas:"time cash cash cash" "power power sound pause";gap:6px}
+  .chip{padding:5px 9px}
+  .chip.time{grid-area:time}
+  .chip.cash{grid-area:cash}
+  .chip.power{grid-area:power}
+  #soundBtn{grid-area:sound;width:auto}
+  #pauseBtn{grid-area:pause;width:auto}
+  #clock{font-size:20px}
+  #money{font-size:20px}
+  .orders{overflow:auto;gap:6px}
+  .orders-head{display:flex}
+  .order-list{grid-template-columns:minmax(0,1fr);gap:6px}
+  .order{padding:7px 8px;align-items:center}
+  .o-route .from,.o-meta .due,.o-meta .long{display:none}
+  .o-meta .short{display:inline}
+  .fee{display:block;font-size:16px}
+  .side-help{display:none}
+  .map-wrap{align-items:center;padding-top:0}
+  .banner{top:8px;padding:6px 12px;font-size:12px}
+  .pad{display:contents}
+  .pd{height:auto}
+  .pd[data-dir="up"]{grid-area:up}
+  .pd[data-dir="down"]{grid-area:down}
+  .pd[data-dir="left"]{grid-area:left}
+  .pd[data-dir="right"]{grid-area:right}
+  .pd.brake{grid-area:brake;font-size:17px}
+  .card{padding-bottom:12px}
+  .card .cta{position:sticky;bottom:0;z-index:1;box-shadow:0 4px 0 #C98E12,0 12px 0 var(--panel)}
+  .card .cta:active{box-shadow:0 2px 0 #C98E12,0 12px 0 var(--panel)}
+}
 @media (prefers-reduced-motion:reduce){
   .banner{animation:none}
   .batt i{transition:none}
@@ -1661,7 +1706,10 @@ document.addEventListener('visibilitychange',function(){if(document.hidden)pause
 
 // ---------- Sizing ----------
 function resize(){
-  const wrap=$('mapWrap'),w=wrap.clientWidth-10,h=wrap.clientHeight-10;
+  const wrap=$('mapWrap'),h=wrap.clientHeight-10;let w=wrap.clientWidth-10;
+  // Phone landscape: the map column is only as wide as the map, so also count what the side columns can spare
+  const side=parseFloat(getComputedStyle(document.querySelector('.app')).getPropertyValue('--side-min'));
+  if(side>0)w+=document.querySelector('.hud').clientWidth+document.querySelector('.orders').clientWidth-2*side;
   const nt=Math.max(10,Math.floor(Math.min(w/W,h/H)));
   const nd=Math.min(3,window.devicePixelRatio||1);
   if(nt!==T||nd!==dpr||!canvas.style.width){
