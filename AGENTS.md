@@ -26,12 +26,17 @@
   - `manifest.webmanifest`：桌面名字"跑单王"、图标、全屏打开。
   - `sw.js`：离线用。先联网取最新版，断网才用存下的副本，所以平时改 `index.html` 不用动它；新增需要离线的文件时，加进它的 `FILES` 列表，并把 `CACHE` 里的版本号加一。
   - `icons/`：桌面图标。`icons/icon.html` 用 Canvas 画出图标，改图标就改这个文件，再导出同名的 `icon-512.png`、`icon-192.png`、`apple-touch-icon.png`（180×180）替换旧图。
+- `server/`：排行榜程序，跑在仓库主人自己的 Vultr 服务器上（新加坡，Ubuntu 24.04），不在 GitHub Pages 上运行，游戏离了它也照常能玩。
+  - `server/leaderboard.py`：只用 Python 自带功能的小网页服务，成绩存在服务器的 SQLite 文件里。收成绩 `/api/sync`，取前 20 名 `/api/top`。
+  - `server/install.sh`：一键安装和更新，用 Caddy 配加密连接（https）。没有域名时用"IP.sslip.io"当网址。
+  - 游戏里的 `BOARD_URL` 是排行榜地址，空着就不显示排行榜。服务器的登录信息不进仓库，也不要向仓库主人要。
 
 ## 发布
 
 - 仓库是公开的，`main` 分支根目录通过 GitHub Pages 发布到 <https://qwt1998.github.io/Game/>，推送后自动更新。
 - Claude 上还有一份同样的版本：<https://claude.ai/artifact/FTjmnJ6vQMNN4nr5QSYrYA>。改完后用同一份 `index.html` 更新这个链接，两边保持一致。当前环境更新不了的话，在汇报里说明，不要另建新链接。Claude 副本只需要 `index.html`；"添加到桌面"只在 GitHub Pages 上生效，页面被嵌在别的网页里（比如 Claude 预览）时会自动跳过。
 - 仓库公开，不要往里放密码、密钥或个人信息。
+- 改了 `server/` 里的东西：推送后，请仓库主人在 Vultr 后台的服务器控制台里再运行一次安装命令 `curl -fsSL https://qwt1998.github.io/Game/server/install.sh | bash`，就会更新到最新版，成绩不会丢。只改 `index.html` 不用动服务器。
 
 ## 必须保持的约定
 
@@ -54,6 +59,7 @@
 | 撞车惩罚 | `crash()` |
 | 逆行和交警 | `isWrongWay()`、`caught()`、`updatePolice()` |
 | 结算评级和点评 | `endGame()` |
+| 排行榜（地址、上传成绩、补传、排行榜页面） | `Leaderboard` 一段（`BOARD_URL`、`syncRider()`），排行榜页面在 `openBoard()`；服务器那边在 `server/leaderboard.py`（上限 `MAX_BEST`、频率限制 `RIDER_GAP`、`IP_PER_HOUR`） |
 | 骑手名字和本机成绩（最好、局数、累计、准时率、最近 10 局） | `Riders` 一段（`newRider()`、`loadRiders()`，存在浏览器的 `lunch-rush-players` 里），开始页显示在 `refreshRider()`，一局结束时在 `endGame()` 里记账 |
 | 背景音乐 | `Sound` 模块里的 `PROG`（和弦）、`HOOK`（主旋律）、`stepAt()`（编曲） |
 | 音效 | `Sound` 模块里的 `FX` |
@@ -67,6 +73,7 @@
 - 截图看两种宽度的画面：约 400px 的手机宽度和桌面宽度。
 - 改了玩法数值的，跑完一整局（约 2 分半）看结算是否合理。
 - 改了添加到桌面相关的东西（`manifest.webmanifest`、`sw.js`、`icons/`、`APP_HOST` 一段）的：用本地网页服务器打开（直接双击文件不算数），确认图标和这几个文件都能加载、浏览器没有报"不能安装"，断网后刷新还能打开。
+- 改了排行榜的：在本机用 `PAODAN_DB=临时文件 PAODAN_PORT=8799 python3 server/leaderboard.py serve` 跑一个测试排行榜，把游戏副本里的 `BOARD_URL` 临时指向 `http://127.0.0.1:8799` 测（不要把这个测试地址提交进仓库）。要测到：正常上传、造假成绩被拒、名字里的符号按文字显示、排行榜连不上时游戏照常能玩。改了 `install.sh` 的至少跑 `bash -n` 检查语法。
 
 ## 改完怎么汇报
 

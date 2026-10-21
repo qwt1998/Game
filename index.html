@@ -204,6 +204,20 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .history ol{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px}
 .history li{display:flex;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:8px;background:var(--panel-2)}
 .history li b{color:var(--ink);font-family:var(--f-num);font-weight:600}
+.board-line{margin:6px 0 0;font-size:13px;color:var(--muted)}
+.board-line b{color:var(--signal);font-family:var(--f-num);font-weight:600}
+.board-msg{margin:0 0 14px;font-size:14px;color:#C9D2DA}
+.rank-list{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:6px}
+.rank-list li{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 12px;border-radius:12px;background:var(--panel-2);font-size:14px}
+.rank-list li.me{box-shadow:0 0 0 2px var(--signal) inset}
+.rank-list .no{font-family:var(--f-num);font-weight:600;font-size:16px;color:var(--muted);text-align:center}
+.rank-list .top1 .no{color:#FFC23D}
+.rank-list .top2 .no{color:#D7DEE5}
+.rank-list .top3 .no{color:#E8A06A}
+.rank-list .who{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.rank-list .who small{margin-left:6px;font-weight:400;font-size:12px;color:var(--muted)}
+.rank-list .pay{font-family:var(--f-num);font-weight:600;color:var(--signal)}
+.rank-list li.gap{display:block;padding:0;background:none;text-align:center;color:var(--muted)}
 .install{margin:10px 0 0;text-align:center;font-size:12.5px;line-height:1.6;color:var(--muted)}
 .big{font-family:var(--f-num);font-weight:600;font-size:56px;line-height:1;color:var(--signal);font-variant-numeric:tabular-nums}
 .record{margin:6px 0 0;font-size:13px;color:var(--muted)}
@@ -347,6 +361,7 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
     </div>
     <p class="best" id="bestLine"></p>
     <button class="cta" id="startBtn" type="button">开跑</button>
+    <button class="ghost" id="boardBtn" type="button" hidden>排行榜</button>
     <details class="history" id="history" hidden><summary id="historySum"></summary><ol id="historyList"></ol></details>
     <div class="install" id="installTip" hidden></div>
   </section>
@@ -368,9 +383,19 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
     <h2 id="rTitle">熟练骑手</h2>
     <div class="big" id="rIncome">¥0</div>
     <p class="record" id="rRecord"></p>
+    <p class="board-line" id="rBoard" hidden></p>
     <dl class="stats" id="rStats"></dl>
     <p class="note" id="rNote"></p>
     <button class="cta" id="againBtn" type="button">再跑一局</button>
+    <button class="ghost" id="boardBtn2" type="button" hidden>看排行榜</button>
+  </section>
+
+  <section class="card" id="pBoard" hidden>
+    <p class="eyebrow">跑单王排行榜</p>
+    <h2>谁跑得最多</h2>
+    <p class="board-msg" id="bMsg"></p>
+    <ol class="rank-list" id="bList"></ol>
+    <button class="cta" id="bBack" type="button">返回</button>
   </section>
 </div>
 
@@ -762,6 +787,32 @@ function loadRiders(){
 function saveRiders(d){try{localStorage.setItem(KEY,JSON.stringify(d||riders))}catch(e){}}
 const riders=loadRiders();
 function me(){return riders.list.find(function(r){return r.id===riders.cur});}
+
+// ---------- Leaderboard ----------
+// Scores go to the owner's own server (server/ in the repo). An empty address turns the leaderboard off.
+const BOARD_URL='';
+const BOARD_ON=!!BOARD_URL&&window.self===window.top;
+function boardFetch(path,body){
+  const ctl=window.AbortController?new AbortController():null,timer=setTimeout(function(){if(ctl)ctl.abort()},8000);
+  const opt=body?{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(body)}:{};
+  if(ctl)opt.signal=ctl.signal;
+  return fetch(BOARD_URL+path,opt).then(function(res){
+    clearTimeout(timer);
+    return res.json().catch(function(){return {}}).then(function(d){if(!res.ok)throw new Error(d.error||res.status);return d;});
+  },function(e){clearTimeout(timer);throw e;});
+}
+// Sends one rider's totals; the server keeps everyone's best. Anything not sent yet is retried on the next visit.
+const syncing={};
+function syncRider(r){
+  if(!BOARD_ON||!r.games)return Promise.resolve(null);
+  if(syncing[r.id])return syncing[r.id];
+  const p=boardFetch('/api/sync',{id:r.id,name:r.name,best:r.best,games:r.games,income:r.income,delivered:r.delivered,onTime:r.onTime})
+    .then(function(d){r.synced=true;saveRiders();return d;});
+  syncing[r.id]=p;
+  p.then(function(){delete syncing[r.id];},function(){delete syncing[r.id];});
+  return p;
+}
+if(BOARD_ON)riders.list.forEach(function(r){if(r.games&&!r.synced)syncRider(r).catch(function(){});});
 
 function makeCars(){
   const cols=['#F5F7F9','#4E86E0','#E8585C','#A9B4C0','#59B36B','#F5F7F9','#7D6BD9','#E88B4A','#2FB6C9','#F5F7F9'];
@@ -1663,7 +1714,7 @@ function banner(html,cls){
 }
 
 // ---------- Screens ----------
-const overlay=$('overlay'),panels={start:$('pStart'),pause:$('pPause'),over:$('pOver')};
+const overlay=$('overlay'),panels={start:$('pStart'),pause:$('pPause'),over:$('pOver'),board:$('pBoard')};
 function showPanel(name){
   overlay.hidden=!name;
   Object.keys(panels).forEach(function(k){panels[k].hidden=k!==name});
@@ -1691,7 +1742,7 @@ function refreshRider(){
     li.appendChild(when);li.appendChild(what);list.appendChild(li);
   });
 }
-nameInput.addEventListener('input',function(){const v=nameInput.value.trim();if(v){me().name=v.slice(0,12);saveRiders();}});
+nameInput.addEventListener('input',function(){const v=nameInput.value.trim();if(v){const r=me();r.name=v.slice(0,12);r.synced=false;saveRiders();}});
 nameInput.addEventListener('change',refreshRider);
 nameInput.addEventListener('blur',refreshRider);
 nameInput.addEventListener('keydown',function(e){if(e.key==='Enter')nameInput.blur();});
@@ -1722,7 +1773,15 @@ function endGame(){
   else{rec.textContent=best>0?'最好成绩 '+fmtMoney(best):'';rec.className='record';}
   r.games++;r.income=Math.round((r.income+income)*10)/10;r.delivered+=st.delivered;r.onTime+=st.onTime;
   r.recent.unshift({at:Date.now(),income:income,delivered:st.delivered,rank:rank});r.recent=r.recent.slice(0,10);
-  saveRiders();
+  r.synced=false;saveRiders();
+  const rb=$('rBoard');rb.hidden=!BOARD_ON;
+  if(BOARD_ON){
+    rb.textContent='正在上传到排行榜…';
+    syncRider(r).then(function(d){
+      if(d&&d.me)rb.innerHTML='排行榜第 <b>'+d.me.rank+'</b> 名（共 '+d.total+' 人上榜）';
+      else rb.textContent='已上传。收入是正数才会上榜';
+    }).catch(function(){rb.textContent='排行榜暂时连不上，成绩先存在本机，下次打开自动补传';});
+  }
   const items=[['送达',st.delivered+' 单'],['准时率',st.delivered?Math.round(rate*100)+'%':'—'],['时薪',fmtMoney(income/2.5)],['事故',st.crashes+' 次'],['违章',st.tickets+' 次'],['额外支出',fmtMoney(st.spend)],['换电',st.swaps+' 次'],['打赏',st.tips+' 次'],['没送完',und+' 单']];
   $('rStats').innerHTML=items.map(function(it){return '<div><dt>'+it[0]+'</dt><dd>'+it[1]+'</dd></div>'}).join('');
   let note;
@@ -1737,6 +1796,39 @@ function endGame(){
   $('rNote').textContent=note;
   refreshRider();showPanel('over');
 }
+
+// Leaderboard card: top 20, plus my own row underneath when I'm further down
+let boardBack='start';
+function rankRow(rank,name,best,games,mine){
+  const li=document.createElement('li'),no=document.createElement('span'),who=document.createElement('span'),sm=document.createElement('small'),pay=document.createElement('span');
+  li.className=(mine?'me ':'')+(rank<=3?'top'+rank:'');
+  no.className='no';no.textContent=rank;
+  who.className='who';who.textContent=name;sm.textContent=games+' 局';who.appendChild(sm);
+  pay.className='pay';pay.textContent=fmtMoney(best);
+  li.appendChild(no);li.appendChild(who);li.appendChild(pay);
+  return li;
+}
+function openBoard(){
+  boardBack=panels.over.hidden?'start':'over';
+  const msg=$('bMsg'),list=$('bList'),r=me();
+  msg.textContent='正在加载…';list.innerHTML='';
+  showPanel('board');
+  (r.games&&!r.synced?syncRider(r).catch(function(){}):Promise.resolve()).then(function(){
+    return boardFetch('/api/top?id='+encodeURIComponent(r.id));
+  }).then(function(d){
+    if(!d.top||!d.top.length){msg.textContent='还没有人上榜，跑一局当第一个';return;}
+    msg.textContent=d.me?'你是第 '+d.me.rank+' 名，一共 '+d.total+' 人上榜':'一共 '+d.total+' 人上榜。'+(r.games?'收入是正数就能上榜':'跑完一局就能上榜');
+    d.top.forEach(function(x){list.appendChild(rankRow(x.rank,x.name,x.best,x.games,x.me));});
+    if(d.me&&!d.top.some(function(x){return x.me})){
+      const gap=document.createElement('li');gap.className='gap';gap.textContent='⋯';list.appendChild(gap);
+      list.appendChild(rankRow(d.me.rank,d.me.name,d.me.best,r.games,true));
+    }
+  }).catch(function(){msg.textContent='暂时连不上排行榜，等会儿再试';});
+}
+if(BOARD_ON){$('boardBtn').hidden=false;$('boardBtn2').hidden=false;}
+$('boardBtn').addEventListener('click',openBoard);
+$('boardBtn2').addEventListener('click',openBoard);
+$('bBack').addEventListener('click',function(){showPanel(boardBack);});
 
 $('startBtn').addEventListener('click',startGame);
 $('againBtn').addEventListener('click',startGame);
