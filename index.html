@@ -187,6 +187,7 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .toggle[aria-pressed="true"] i{background:var(--ok)}
 .toggle[aria-pressed="true"] i::after{transform:translateX(18px)}
 .best{margin:12px 0 0;text-align:center;font-size:12.5px;color:var(--muted)}
+.install{margin:10px 0 0;text-align:center;font-size:12.5px;line-height:1.6;color:var(--muted)}
 .big{font-family:var(--f-num);font-weight:600;font-size:56px;line-height:1;color:var(--signal);font-variant-numeric:tabular-nums}
 .record{margin:6px 0 0;font-size:13px;color:var(--muted)}
 .record.new{color:var(--ok);font-weight:700}
@@ -328,6 +329,7 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
     <p class="controls">游戏里 1 秒 = 1 分钟<br>电脑：方向键或 WASD 转向，空格刹车，P 暂停<br>手机：在地图上滑动转向，或用下方按键<br>有背景音乐和音效，右上角喇叭或按 M 可以静音</p>
     <button class="cta" id="startBtn" type="button">开跑</button>
     <p class="best" id="bestLine" hidden></p>
+    <div class="install" id="installTip" hidden></div>
   </section>
 
   <section class="card" id="pPause" hidden>
@@ -363,6 +365,21 @@ try{
   lk.href='https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap';
   document.head.appendChild(lk);
 }catch(e){}
+
+// Home-screen app "跑单王": only on the real site, not when this page is shown inside another one (like the Claude preview)
+const APP_HOST=window.isSecureContext&&window.self===window.top;
+if(APP_HOST){
+  try{
+    [['link',{rel:'manifest',href:'manifest.webmanifest'}],
+     ['link',{rel:'apple-touch-icon',href:'icons/apple-touch-icon.png'}],
+     ['meta',{name:'apple-mobile-web-app-capable',content:'yes'}],
+     ['meta',{name:'apple-mobile-web-app-status-bar-style',content:'black-translucent'}],
+     ['meta',{name:'apple-mobile-web-app-title',content:'跑单王'}],
+     ['meta',{name:'theme-color',content:'#0F1318'}]
+    ].forEach(function(t){const n=document.createElement(t[0]);Object.keys(t[1]).forEach(function(k){n.setAttribute(k,t[1][k])});document.head.appendChild(n);});
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
+  }catch(e){}
+}
 
 const W=19,H=25,DAY=150,START_MIN=660,BOX=3,PEAK_A=60,PEAK_B=100,SPEED=4.3;
 const SWAP_COST=3,FINE=10,MEDICAL=12,REPAIR_PER=5;
@@ -1656,6 +1673,27 @@ $('againBtn').addEventListener('click',startGame);
 $('restartBtn').addEventListener('click',startGame);
 $('resumeBtn').addEventListener('click',resume);
 $('pauseBtn').addEventListener('click',function(){this.blur();if(state==='play')pause();else if(state==='paused')resume();});
+
+// ---------- Home-screen tip ----------
+// First-time visitors get one line on the start card telling them how to put 跑单王 on their home screen.
+const installTip=$('installTip');
+function showTip(html){installTip.innerHTML=html;installTip.hidden=false;}
+const installed=['standalone','fullscreen'].some(function(m){try{return matchMedia('(display-mode: '+m+')').matches}catch(e){return false}})||navigator.standalone===true;
+if(APP_HOST&&!installed){
+  const ua=navigator.userAgent,touch=(function(){try{return matchMedia('(pointer:coarse)').matches}catch(e){return false}})();
+  if(/MicroMessenger/i.test(ua))showTip('想放到手机桌面：点右上角「…」选「在浏览器打开」，再添加到主屏幕');
+  else if(/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1))showTip('想放到手机桌面：点浏览器的「分享」按钮，选「添加到主屏幕」');
+  else if(touch)showTip('想放到手机桌面：在浏览器菜单里选「添加到主屏幕」');
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault();
+    showTip('<button class="ghost" type="button" id="installBtn">把「跑单王」装到桌面</button>');
+    $('installBtn').addEventListener('click',function(){
+      installTip.hidden=true;
+      try{const p=e.prompt();if(p&&p.catch)p.catch(function(){});}catch(err){}
+    });
+  });
+  window.addEventListener('appinstalled',function(){installTip.hidden=true;});
+}
 
 // ---------- Sound controls ----------
 const soundBtn=$('soundBtn'),musicT=$('musicToggle'),sfxT=$('sfxToggle');

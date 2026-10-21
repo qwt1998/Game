@@ -22,11 +22,15 @@
 
 - 单文件游戏：`index.html`，原生 HTML/CSS/JS，无构建步骤、无依赖。唯一外部资源是 Google Fonts（加载失败有系统字体兜底）。
 - 所有画面用 Canvas 2D 绘制；所有声音用 Web Audio 实时合成，不要引入图片或音频文件。
+- 例外：下面这几个文件只用来"添加到手机桌面"（网页应用，PWA），游戏本身不依赖它们，不要删：
+  - `manifest.webmanifest`：桌面名字"跑单王"、图标、全屏打开。
+  - `sw.js`：离线用。先联网取最新版，断网才用存下的副本，所以平时改 `index.html` 不用动它；新增需要离线的文件时，加进它的 `FILES` 列表，并把 `CACHE` 里的版本号加一。
+  - `icons/`：桌面图标。`icons/icon.html` 用 Canvas 画出图标，改图标就改这个文件，再导出同名的 `icon-512.png`、`icon-192.png`、`apple-touch-icon.png`（180×180）替换旧图。
 
 ## 发布
 
 - 仓库是公开的，`main` 分支根目录通过 GitHub Pages 发布到 <https://qwt1998.github.io/Game/>，推送后自动更新。
-- Claude 上还有一份同样的版本：<https://claude.ai/artifact/FTjmnJ6vQMNN4nr5QSYrYA>。改完后用同一份 `index.html` 更新这个链接，两边保持一致。当前环境更新不了的话，在汇报里说明，不要另建新链接。
+- Claude 上还有一份同样的版本：<https://claude.ai/artifact/FTjmnJ6vQMNN4nr5QSYrYA>。改完后用同一份 `index.html` 更新这个链接，两边保持一致。当前环境更新不了的话，在汇报里说明，不要另建新链接。Claude 副本只需要 `index.html`；"添加到桌面"只在 GitHub Pages 上生效，页面被嵌在别的网页里（比如 Claude 预览）时会自动跳过。
 - 仓库公开，不要往里放密码、密钥或个人信息。
 
 ## 必须保持的约定
@@ -52,6 +56,8 @@
 | 结算评级和点评 | `endGame()` |
 | 背景音乐 | `Sound` 模块里的 `PROG`（和弦）、`HOOK`（主旋律）、`stepAt()`（编曲） |
 | 音效 | `Sound` 模块里的 `FX` |
+| 添加到桌面（接上图标、离线、桌面名字） | 脚本开头的 `APP_HOST` 一段，以及 `manifest.webmanifest` |
+| 开始页"想放到手机桌面"的提示 | `Home-screen tip` 一段（`installTip`） |
 
 ## 怎么验证
 
@@ -59,6 +65,7 @@
 - 用无头浏览器打开 `index.html`，开一局，确认控制台没有报错。
 - 截图看两种宽度的画面：约 400px 的手机宽度和桌面宽度。
 - 改了玩法数值的，跑完一整局（约 2 分半）看结算是否合理。
+- 改了添加到桌面相关的东西（`manifest.webmanifest`、`sw.js`、`icons/`、`APP_HOST` 一段）的：用本地网页服务器打开（直接双击文件不算数），确认图标和这几个文件都能加载、浏览器没有报"不能安装"，断网后刷新还能打开。
 
 ## 改完怎么汇报
 

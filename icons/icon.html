@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>跑单王图标</title>
+<style>
+:root{--bg:#F4F1EA;--ink:#1F2A3A;--muted:#6B7684;--card:#FFFFFF}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1318;--ink:#F1F4F6;--muted:#8D9AA7;--card:#182028}}
+body{margin:0;padding:24px 16px;background:var(--bg);color:var(--ink);font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+main{max-width:760px;margin:0 auto}
+h1{font-size:22px;margin:0 0 4px}
+p{margin:0 0 16px;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;margin-bottom:20px}
+figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+canvas{display:block;max-width:100%;height:auto}
+.r{border-radius:22%}
+.c{border-radius:50%}
+a{display:inline-block;margin-right:12px;color:inherit}
+</style>
+</head>
+<body>
+<main>
+  <h1>跑单王 · 桌面图标</h1>
+  <p>图标是这里的代码画出来的。改了下面的 drawIcon 以后，用浏览器打开本页，点链接下载新的图片，替换 icons 文件夹里同名的文件。</p>
+  <div class="row" id="previews"></div>
+  <div id="links"></div>
+</main>
+<script>
+// The whole icon is drawn on a 512×512 grid and scaled to any size.
+// Everything that matters stays inside the central circle so Android's round masks don't cut it off.
+const INK='#1F2A3A',LW=9;
+
+function drawIcon(g,size){
+  g.save();g.scale(size/512,size/512);
+  g.lineJoin='round';g.lineCap='round';
+
+  const bg=g.createLinearGradient(0,0,0,512);bg.addColorStop(0,'#FFD85E');bg.addColorStop(1,'#FFA62B');
+  g.fillStyle=bg;g.fillRect(0,0,512,512);
+  g.fillStyle='rgba(255,255,255,.28)';circle(g,300,250,170);g.fill();
+
+  // ground shadow and speed lines
+  g.fillStyle='rgba(150,70,0,.2)';g.beginPath();g.ellipse(292,428,165,13,0,0,Math.PI*2);g.fill();
+  g.strokeStyle='rgba(255,255,255,.9)';g.lineWidth=11;
+  [[52,336,128],[30,372,120],[64,408,136]].forEach(function(s){g.beginPath();g.moveTo(s[0],s[1]);g.lineTo(s[2],s[1]);g.stroke();});
+
+  trail(g);
+
+  // wheels
+  wheel(g,196,382);wheel(g,398,382);
+  // front fork and fender
+  limb(g,[[392,300],[398,382]],12,'#C9D2DB');
+  g.lineWidth=16+LW*2;g.strokeStyle=INK;g.beginPath();g.arc(398,382,56,Math.PI*1.12,Math.PI*1.86);g.stroke();
+  g.lineWidth=16;g.strokeStyle='#F4F6F8';g.beginPath();g.arc(398,382,56,Math.PI*1.12,Math.PI*1.86);g.stroke();
+
+  // scooter body: rear panel, floorboard and steering column in one piece
+  shape(g,function(){
+    g.moveTo(140,370);g.lineTo(150,326);g.quadraticCurveTo(160,300,204,298);g.lineTo(318,298);
+    g.quadraticCurveTo(340,300,342,324);g.lineTo(344,344);g.lineTo(362,344);g.lineTo(380,256);g.lineTo(406,256);
+    g.lineTo(390,344);g.quadraticCurveTo(386,370,362,370);g.closePath();
+  },'#F4F6F8');
+  g.fillStyle='#D5DDE5';g.beginPath();g.moveTo(152,352);g.lineTo(336,352);g.lineTo(338,364);g.lineTo(148,364);g.closePath();g.fill();
+  // headlight and handlebar
+  g.fillStyle='#FFE58A';circle(g,412,284,12);g.fill();g.lineWidth=LW*.8;g.strokeStyle=INK;g.stroke();
+  limb(g,[[386,254],[430,240]],12,INK);
+
+  // delivery box on the rear rack
+  limb(g,[[134,292],[248,292]],8,INK);
+  shape(g,function(){rr(g,120,166,124,122,18);},'#F2603E');
+  g.fillStyle='#FF8D5E';g.save();rr(g,120,166,124,122,18);g.clip();g.fillRect(120,166,124,30);g.restore();
+  g.lineWidth=LW;g.strokeStyle=INK;rr(g,120,166,124,122,18);g.stroke();
+  g.beginPath();g.moveTo(124,196);g.lineTo(240,196);g.stroke();
+  g.fillStyle='#FFFFFF';rr(g,146,224,72,16,8);g.fill();
+  // seat
+  shape(g,function(){rr(g,222,280,104,22,11);},'#2B3A4B');
+
+  // rider: leg, body, arm, helmet
+  limb(g,[[288,284],[344,288],[352,338]],30,'#3A4A60');
+  shape(g,function(){rr(g,336,330,42,16,8);},INK);
+  limb(g,[[290,268],[322,210]],54,'#2F6FDF');
+  g.strokeStyle='#FFE58A';g.lineWidth=8;g.beginPath();g.moveTo(286,236);g.lineTo(326,252);g.stroke();
+  limb(g,[[328,214],[364,238],[398,248]],22,'#2F6FDF');
+  g.fillStyle='#F2D2B6';circle(g,402,248,11);g.fill();g.lineWidth=LW*.8;g.strokeStyle=INK;g.stroke();
+  helmet(g,336,166,38);
+  // effort lines behind the helmet
+  g.strokeStyle='#FFFFFF';g.lineWidth=8;
+  [[262,150,288,148],[256,176,284,178]].forEach(function(s){g.beginPath();g.moveTo(s[0],s[1]);g.lineTo(s[2],s[3]);g.stroke();});
+
+  g.restore();
+}
+
+// Takeout orders flying after the rider
+function trail(g){
+  g.strokeStyle='rgba(255,255,255,.85)';g.lineWidth=7;g.setLineDash([14,14]);
+  g.beginPath();g.moveTo(116,250);g.quadraticCurveTo(112,140,232,104);g.stroke();g.setLineDash([]);
+  item(g,218,100,-.18,tea);
+  item(g,136,116,-.12,bag);
+  item(g,80,184,.12,noodles);
+  item(g,70,266,-.08,burger);
+}
+function item(g,x,y,rot,draw){g.save();g.translate(x,y);g.rotate(rot);draw(g);g.restore();}
+function tea(g){
+  limb(g,[[6,-44],[16,-64]],7,INK);
+  shape(g,function(){g.moveTo(-22,-26);g.lineTo(22,-26);g.lineTo(17,30);g.lineTo(-17,30);g.closePath();},'#FFB8CC');
+  g.fillStyle='#F58DAA';g.fillRect(-19,-4,38,12);
+  g.fillStyle=INK;[[-8,20],[2,22],[10,18]].forEach(function(p){circle(g,p[0],p[1],4);g.fill();});
+  shape(g,function(){g.ellipse(0,-28,26,9,0,0,Math.PI*2);},'#FFFFFF');
+}
+function bag(g){
+  g.lineWidth=7+LW*2;g.strokeStyle=INK;g.beginPath();g.arc(0,-26,13,Math.PI,0);g.stroke();
+  g.lineWidth=7;g.strokeStyle='#C99A55';g.beginPath();g.arc(0,-26,13,Math.PI,0);g.stroke();
+  shape(g,function(){rr(g,-27,-28,54,58,6);},'#EBC88E');
+  g.fillStyle='#D9AE6B';g.fillRect(-23,-24,46,8);
+  g.fillStyle='#F2603E';circle(g,0,6,9);g.fill();
+}
+function noodles(g){
+  limb(g,[[6,-24],[20,-50]],5,'#B5763A');limb(g,[[14,-24],[30,-46]],5,'#B5763A');
+  shape(g,function(){g.moveTo(-28,-22);g.lineTo(28,-22);g.lineTo(21,26);g.lineTo(-21,26);g.closePath();},'#FFFFFF');
+  g.fillStyle='#E9574A';g.fillRect(-24,-6,48,10);
+  g.lineWidth=LW;g.strokeStyle=INK;g.beginPath();g.moveTo(-28,-22);g.lineTo(28,-22);g.lineTo(21,26);g.lineTo(-21,26);g.closePath();g.stroke();
+}
+function burger(g){
+  shape(g,function(){g.moveTo(-28,-2);g.quadraticCurveTo(-28,-30,0,-30);g.quadraticCurveTo(28,-30,28,-2);g.closePath();},'#F2A93B');
+  shape(g,function(){rr(g,-30,-2,60,10,5);},'#6BBF59');
+  shape(g,function(){rr(g,-28,8,56,10,5);},'#8B4A2B');
+  shape(g,function(){g.moveTo(-28,18);g.lineTo(28,18);g.quadraticCurveTo(28,30,16,30);g.lineTo(-16,30);g.quadraticCurveTo(-28,30,-28,18);g.closePath();},'#F2A93B');
+  g.fillStyle='#FFF4D6';[[-10,-20],[4,-24],[14,-16]].forEach(function(p){circle(g,p[0],p[1],2.5);g.fill();});
+}
+
+function wheel(g,x,y){
+  g.fillStyle=INK;circle(g,x,y,44);g.fill();
+  g.fillStyle='#E6EBF0';circle(g,x,y,21);g.fill();
+  g.fillStyle=INK;circle(g,x,y,8);g.fill();
+}
+function helmet(g,x,y,r){
+  g.save();circle(g,x,y,r);g.fillStyle='#FFFFFF';g.fill();g.clip();
+  g.fillStyle='#FFC23D';g.fillRect(x-r,y-r,r*2,r*.42);
+  g.fillStyle='#24303C';rr(g,x+2,y-8,r+4,r*.75,10);g.fill();
+  g.fillStyle='rgba(255,255,255,.5)';rr(g,x+12,y-3,14,6,3);g.fill();
+  g.restore();
+  g.lineWidth=LW;g.strokeStyle=INK;circle(g,x,y,r);g.stroke();
+}
+// A thick stroke with a dark outline, for legs, arms and bars.
+function limb(g,pts,w,color){
+  [[w+LW*2,INK],[w,color]].forEach(function(s){
+    g.lineWidth=s[0];g.strokeStyle=s[1];g.beginPath();g.moveTo(pts[0][0],pts[0][1]);
+    for(let i=1;i<pts.length;i++)g.lineTo(pts[i][0],pts[i][1]);g.stroke();
+  });
+}
+function shape(g,path,fill){g.beginPath();path();g.fillStyle=fill;g.fill();g.lineWidth=LW;g.strokeStyle=INK;g.stroke();}
+function circle(g,x,y,r){g.beginPath();g.arc(x,y,r,0,Math.PI*2);}
+function rr(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+
+function iconCanvas(size){const c=document.createElement('canvas');c.width=c.height=size;drawIcon(c.getContext('2d'),size);return c;}
+// Used by the export script: returns the PNG for one size as a data URL.
+window.iconPNG=function(size){return iconCanvas(size).toDataURL('image/png');};
+
+const FILES=[['icon-512.png',512],['icon-192.png',192],['apple-touch-icon.png',180]];
+const previews=document.getElementById('previews');
+[[256,'r','iPhone 桌面'],[256,'c','安卓圆形'],[96,'r','小图标'],[48,'r','最小']].forEach(function(p){
+  const f=document.createElement('figure'),c=iconCanvas(p[0]*2);
+  c.style.width=p[0]+'px';c.className=p[1];
+  f.appendChild(c);f.appendChild(document.createTextNode(p[2]));previews.appendChild(f);
+});
+const links=document.getElementById('links');
+FILES.forEach(function(f){const a=document.createElement('a');a.href=window.iconPNG(f[1]);a.download=f[0];a.textContent='下载 '+f[0];links.appendChild(a);});
+</script>
+</body>
+</html>
