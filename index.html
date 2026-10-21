@@ -178,6 +178,10 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .cta{display:block;width:100%;height:52px;border:0;border-radius:14px;cursor:pointer;background:var(--signal);color:#1A1F25;font-family:var(--f-display);font-weight:900;font-size:18px;letter-spacing:.12em;box-shadow:0 4px 0 #C98E12}
 .cta:hover{filter:brightness(1.05)}
 .cta:active{transform:translateY(2px);box-shadow:0 2px 0 #C98E12}
+/* On short screens the card scrolls; its main button stays pinned to the bottom so it never has to be hunted for */
+.card{padding-bottom:12px}
+.card .cta{position:sticky;bottom:0;z-index:1;box-shadow:0 4px 0 #C98E12,0 12px 0 var(--panel)}
+.card .cta:active{box-shadow:0 2px 0 #C98E12,0 12px 0 var(--panel)}
 .ghost{display:block;width:100%;height:46px;margin-top:12px;border-radius:12px;cursor:pointer;border:0;background:var(--panel-2);color:var(--ink);font-size:15px;font-weight:500}
 .ghost:hover{filter:brightness(1.15)}
 .toggles{display:grid;gap:8px;margin:0 0 16px}
@@ -186,7 +190,20 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .toggle i::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#FFFFFF;transition:transform .2s}
 .toggle[aria-pressed="true"] i{background:var(--ok)}
 .toggle[aria-pressed="true"] i::after{transform:translateX(18px)}
-.best{margin:12px 0 0;text-align:center;font-size:12.5px;color:var(--muted)}
+.player{display:flex;gap:8px;align-items:flex-end;margin:0 0 8px}
+.player-name{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.player-name input{width:100%;height:44px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel-2);color:var(--ink);font-family:inherit;font-size:16px;font-weight:700}
+.player-name input:focus{outline:2px solid var(--signal);outline-offset:1px}
+.player-switch{position:relative;flex:none;display:flex;align-items:center;height:44px;padding:0 14px;border-radius:12px;background:var(--panel-2);color:var(--ink);font-size:14px;cursor:pointer}
+.player-switch select{position:absolute;inset:0;width:100%;opacity:0;cursor:pointer;font-size:16px}
+.player-switch:focus-within{outline:2px solid var(--signal);outline-offset:2px}
+.best{margin:0 0 16px;font-size:12.5px;color:var(--muted)}
+.best b{color:var(--signal);font-family:var(--f-num);font-weight:600}
+.history{margin:12px 0 0;font-size:12.5px;color:var(--muted)}
+.history summary{cursor:pointer;text-align:center}
+.history ol{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px}
+.history li{display:flex;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:8px;background:var(--panel-2)}
+.history li b{color:var(--ink);font-family:var(--f-num);font-weight:600}
 .install{margin:10px 0 0;text-align:center;font-size:12.5px;line-height:1.6;color:var(--muted)}
 .big{font-family:var(--f-num);font-weight:600;font-size:56px;line-height:1;color:var(--signal);font-variant-numeric:tabular-nums}
 .record{margin:6px 0 0;font-size:13px;color:var(--muted)}
@@ -245,9 +262,6 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
   .pd[data-dir="left"]{grid-area:left}
   .pd[data-dir="right"]{grid-area:right}
   .pd.brake{grid-area:brake;font-size:17px}
-  .card{padding-bottom:12px}
-  .card .cta{position:sticky;bottom:0;z-index:1;box-shadow:0 4px 0 #C98E12,0 12px 0 var(--panel)}
-  .card .cta:active{box-shadow:0 2px 0 #C98E12,0 12px 0 var(--panel)}
 }
 @media (prefers-reduced-motion:reduce){
   .banner{animation:none}
@@ -327,8 +341,13 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
       <li><span class="sw txt station">电</span><span>电量低于一半时路过<b>换电站</b>自动换满，每次 ¥3。</span></li>
     </ul>
     <p class="controls">游戏里 1 秒 = 1 分钟<br>电脑：方向键或 WASD 转向，空格刹车，P 暂停<br>手机：在地图上滑动转向，或用下方按键<br>有背景音乐和音效，右上角喇叭或按 M 可以静音</p>
+    <div class="player">
+      <label class="player-name"><span class="label">骑手名字（可以改）</span><input id="nameInput" type="text" maxlength="12" autocomplete="off" enterkeyhint="done" spellcheck="false"></label>
+      <label class="player-switch"><span>换人</span><select id="playerSel" aria-label="换一个骑手"></select></label>
+    </div>
+    <p class="best" id="bestLine"></p>
     <button class="cta" id="startBtn" type="button">开跑</button>
-    <p class="best" id="bestLine" hidden></p>
+    <details class="history" id="history" hidden><summary id="historySum"></summary><ol id="historyList"></ol></details>
     <div class="install" id="installTip" hidden></div>
   </section>
 
@@ -345,7 +364,7 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
   </section>
 
   <section class="card" id="pOver" hidden>
-    <p class="eyebrow">13:30 · 收工</p>
+    <p class="eyebrow" id="rEyebrow">13:30 · 收工</p>
     <h2 id="rTitle">熟练骑手</h2>
     <div class="big" id="rIncome">¥0</div>
     <p class="record" id="rRecord"></p>
@@ -398,7 +417,7 @@ const C={
   o:['#FF5C8A','#38BDF8','#A78BFA'],bad:'#F43F5E',ok:'#34D399',station:'#3FBFA0',
   rider:'#FFC23D',police:'#3B6FE0',green:'#3BD67A',red:'#F04A4A',repair:'#7B8794'
 };
-const KEY='lunch-rush-best';
+const KEY='lunch-rush-players',OLD_BEST_KEY='lunch-rush-best';
 const reduceMotion=(function(){try{return matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return false}})();
 const $=function(id){return document.getElementById(id)};
 const clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
@@ -724,8 +743,25 @@ const CAR_HALF=.56,CAR_WIDE=.31;
 
 // ---------- Game state ----------
 let S=null,state='start',last=performance.now();
-function readBest(){try{return Number(localStorage.getItem(KEY))||0}catch(e){return 0}}
-function writeBest(v){try{localStorage.setItem(KEY,String(v))}catch(e){}}
+// ---------- Riders: every name keeps its own record in this browser ----------
+// The id stays the same when the name changes, so a future online leaderboard can tell riders apart.
+function newRider(){
+  return {id:Math.random().toString(36).slice(2,10),name:'骑手'+(1000+Math.floor(Math.random()*9000)),best:0,games:0,income:0,delivered:0,onTime:0,recent:[]};
+}
+function loadRiders(){
+  let d=null;try{d=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){}
+  if(!d||!Array.isArray(d.list)||!d.list.length){
+    const r=newRider();
+    try{r.best=Number(localStorage.getItem(OLD_BEST_KEY))||0}catch(e){}  // best score saved before names existed
+    d={cur:r.id,list:[r]};
+    saveRiders(d);
+  }
+  if(!d.list.some(function(r){return r.id===d.cur}))d.cur=d.list[0].id;
+  return d;
+}
+function saveRiders(d){try{localStorage.setItem(KEY,JSON.stringify(d||riders))}catch(e){}}
+const riders=loadRiders();
+function me(){return riders.list.find(function(r){return r.id===riders.cur});}
 
 function makeCars(){
   const cols=['#F5F7F9','#4E86E0','#E8585C','#A9B4C0','#59B36B','#F5F7F9','#7D6BD9','#E88B4A','#2FB6C9','#F5F7F9'];
@@ -1633,7 +1669,37 @@ function showPanel(name){
   Object.keys(panels).forEach(function(k){panels[k].hidden=k!==name});
   if(name){const btn=panels[name].querySelector('.cta');if(btn){try{btn.focus({preventScroll:true})}catch(e){}}}
 }
-function refreshBest(){const best=readBest(),bl=$('bestLine');bl.hidden=!(best>0);bl.textContent='你的最好成绩 '+fmtMoney(best);}
+// Start card: the current rider's name, their numbers and their last few runs
+const nameInput=$('nameInput'),playerSel=$('playerSel');
+function refreshRider(){
+  const r=me();
+  if(document.activeElement!==nameInput)nameInput.value=r.name;
+  playerSel.innerHTML='';
+  riders.list.forEach(function(x){const o=document.createElement('option');o.value=x.id;o.textContent=x.name+(x.best>0?'（最好 '+fmtMoney(x.best)+'）':'');o.selected=x.id===r.id;playerSel.appendChild(o);});
+  const add=document.createElement('option');add.value='new';add.textContent='＋ 新骑手';playerSel.appendChild(add);
+  const bl=$('bestLine');
+  const parts=[];
+  if(r.best>0)parts.push('最好 <b>'+fmtMoney(r.best)+'</b>');
+  if(r.games){parts.push('已跑 '+r.games+' 局','累计 '+fmtMoney(r.income));if(r.delivered)parts.push('准时率 '+Math.round(r.onTime/r.delivered*100)+'%');}
+  if(parts.length)bl.innerHTML=parts.join(' · ');else bl.textContent='还没跑过，开跑试试';
+  const h=$('history'),list=$('historyList');
+  h.hidden=!r.recent.length;$('historySum').textContent='最近 '+r.recent.length+' 局';list.innerHTML='';
+  r.recent.forEach(function(g){
+    const d=new Date(g.at),li=document.createElement('li'),when=document.createElement('span'),what=document.createElement('span'),pay=document.createElement('b');
+    when.textContent=(d.getMonth()+1)+'/'+d.getDate()+' '+fmtClock(d.getHours()*60+d.getMinutes());
+    pay.textContent=fmtMoney(g.income);what.appendChild(pay);what.appendChild(document.createTextNode(' · 送达 '+g.delivered+' 单 · '+g.rank));
+    li.appendChild(when);li.appendChild(what);list.appendChild(li);
+  });
+}
+nameInput.addEventListener('input',function(){const v=nameInput.value.trim();if(v){me().name=v.slice(0,12);saveRiders();}});
+nameInput.addEventListener('change',refreshRider);
+nameInput.addEventListener('blur',refreshRider);
+nameInput.addEventListener('keydown',function(e){if(e.key==='Enter')nameInput.blur();});
+playerSel.addEventListener('change',function(){
+  if(playerSel.value==='new'){const r=newRider();riders.list.push(r);riders.cur=r.id;}
+  else riders.cur=playerSel.value;
+  saveRiders();refreshRider();
+});
 function startGame(){
   newGame();state='play';last=performance.now();showPanel(null);
   banner('头顶<b>「我」</b>就是你。先去<b>黄色气泡</b>接单，大路<b>靠右骑</b>');
@@ -1650,9 +1716,13 @@ function endGame(){
   const st=S.stats,income=Math.round(S.money*10)/10,und=S.active.length,rate=st.delivered?st.onTime/st.delivered:0;
   const rank=income>=150?'单王':income>=100?'金牌骑手':income>=50?'熟练骑手':'新手骑手';
   $('rTitle').textContent=rank;$('rIncome').textContent=fmtMoney(income);
-  const best=readBest(),rec=$('rRecord');
-  if(income>best&&income>0){writeBest(income);rec.textContent='新纪录！';rec.className='record new';}
+  const r=me(),best=r.best,rec=$('rRecord');
+  $('rEyebrow').textContent='13:30 · 收工 · '+r.name;
+  if(income>best&&income>0){r.best=income;rec.textContent='新纪录！';rec.className='record new';}
   else{rec.textContent=best>0?'最好成绩 '+fmtMoney(best):'';rec.className='record';}
+  r.games++;r.income=Math.round((r.income+income)*10)/10;r.delivered+=st.delivered;r.onTime+=st.onTime;
+  r.recent.unshift({at:Date.now(),income:income,delivered:st.delivered,rank:rank});r.recent=r.recent.slice(0,10);
+  saveRiders();
   const items=[['送达',st.delivered+' 单'],['准时率',st.delivered?Math.round(rate*100)+'%':'—'],['时薪',fmtMoney(income/2.5)],['事故',st.crashes+' 次'],['违章',st.tickets+' 次'],['额外支出',fmtMoney(st.spend)],['换电',st.swaps+' 次'],['打赏',st.tips+' 次'],['没送完',und+' 单']];
   $('rStats').innerHTML=items.map(function(it){return '<div><dt>'+it[0]+'</dt><dd>'+it[1]+'</dd></div>'}).join('');
   let note;
@@ -1665,7 +1735,7 @@ function endGame(){
   else if(st.delivered<10)note='准时率不错，可以再大胆一点，箱子空着就是亏。';
   else note='节奏很稳，也守规矩。下一局午高峰多叠几单，冲一冲单王。';
   $('rNote').textContent=note;
-  refreshBest();showPanel('over');
+  refreshRider();showPanel('over');
 }
 
 $('startBtn').addEventListener('click',startGame);
@@ -1720,6 +1790,7 @@ function setWant(d){if(!S)return;S.want=d;S.wantAt=S.t;S.brake=false;}
 function doBrake(){if(!S)return;S.brake=true;S.want=null;}
 const KEYMAP={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right',W:'up',S:'down',A:'left',D:'right'};
 window.addEventListener('keydown',function(e){
+  if(e.target&&/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return;  // typing a name, not playing
   if((e.key==='m'||e.key==='M')&&!e.repeat){toggleAll();return;}
   if(state==='play'){
     const d=KEYMAP[e.key];
@@ -1770,7 +1841,7 @@ function frame(now){
   draw(now);hud();
   requestAnimationFrame(frame);
 }
-newGame();refreshBest();resize();showPanel('start');
+newGame();refreshRider();resize();showPanel('start');
 requestAnimationFrame(frame);
 })();
 </script>

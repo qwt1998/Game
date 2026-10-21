@@ -54,6 +54,7 @@
 | 撞车惩罚 | `crash()` |
 | 逆行和交警 | `isWrongWay()`、`caught()`、`updatePolice()` |
 | 结算评级和点评 | `endGame()` |
+| 骑手名字和本机成绩（最好、局数、累计、准时率、最近 10 局） | `Riders` 一段（`newRider()`、`loadRiders()`，存在浏览器的 `lunch-rush-players` 里），开始页显示在 `refreshRider()`，一局结束时在 `endGame()` 里记账 |
 | 背景音乐 | `Sound` 模块里的 `PROG`（和弦）、`HOOK`（主旋律）、`stepAt()`（编曲） |
 | 音效 | `Sound` 模块里的 `FX` |
 | 添加到桌面（接上图标、离线、桌面名字） | 脚本开头的 `APP_HOST` 一段，以及 `manifest.webmanifest` |
