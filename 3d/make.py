@@ -31,7 +31,7 @@ const G3=window.Paodan3D?window.Paodan3D({
   grid:grid,tile:tile,passable:passable,isMainCh:isMainCh,LANE_DIR:LANE_DIR,BLOCKS:BLOCKS,places:places,stations:stations,repairs:repairs,
   INTERS:INTERS,LANES:LANES,C:C,FONT:FONT,NUM:NUM,fmtMoney:fmtMoney,clamp:clamp,rr:rr,circle:circle,bolt:bolt,chevron:chevron,
   crossingH:crossingH,crossingV:crossingV,isCrossing:isCrossing,playerPos:playerPos,carCenter:carCenter,lightPhase:lightPhase,
-  isWrongWay:isWrongWay,isRain:isRain,reduceMotion:reduceMotion
+  isWrongWay:isWrongWay,isRain:isRain,reduceMotion:reduceMotion,navRoute:navRoute
 }):(function(){document.body.classList.add('no3d');return {draw:draw2d,resize:function(){}};})();
 function draw(now){G3.draw(now);}
 """

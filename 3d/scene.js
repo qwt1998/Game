@@ -240,6 +240,7 @@ window.Paodan3D=function(api){
       mark(ringThick,x,z,.32,'#FFFFFF',.55);mark(arc(frac),x,z,.32,C.pin,1);mark(disc,x,z,.13,C.pin,1);
     });
     S.active.forEach(function(o){const d=destAt(o);mark(ringThin,d[0],d[1],.2+.4*k,S.t>o.deadline?C.bad:C.o[o.slot],1-k);});
+    const nav=api.navRoute();if(nav)navDots(nav,now);
     if(chase)mark(disc,qx,qz,.7,blink?'#F03C46':'#3C6EF0',.35);
     const ring=wrong?C.bad:C.rider;
     mark(disc,pp[0],pp[1],.6,ring,.4);mark(ringThin,pp[0],pp[1],.6,'#FFFFFF',.9);
@@ -255,6 +256,15 @@ window.Paodan3D=function(api){
     camera.updateMatrixWorld();
     renderer.render(scene,camera);
     overlay(now);
+  }
+  // the navigation line on the road: a row of dots that flows towards the door
+  function navDots(nav,now){
+    const pts=nav.pts,gap=.45;let carry=api.reduceMotion?0:gap-(now/1000*1.4)%gap,n=0;
+    for(let i=1;i<pts.length&&n<60;i++){
+      const a=pts[i-1],b=pts[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]);let t=carry;
+      for(;t<len&&n<60;t+=gap,n++)mark(disc,a[0]+(b[0]-a[0])*t/len,a[1]+(b[1]-a[1])*t/len,.11,nav.color,.95);
+      carry=t-len;
+    }
   }
   function ping(p,col,k){
     const x=p.door[0]+.5,z=p.door[1]+.5;
@@ -308,6 +318,12 @@ window.Paodan3D=function(api){
     ctx.strokeStyle='rgba(255,255,255,.8)';ctx.lineWidth=1.2;ctx.beginPath();
     footprint().forEach(function(q,i){if(i)ctx.lineTo(X(q[0]),Y(q[1]));else ctx.moveTo(X(q[0]),Y(q[1]));});
     ctx.closePath();ctx.stroke();
+    const nav=api.navRoute();
+    if(nav){
+      ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();
+      nav.pts.forEach(function(q,i){if(i)ctx.lineTo(X(q[0]),Y(q[1]));else ctx.moveTo(X(q[0]),Y(q[1]));});
+      ctx.strokeStyle='rgba(15,19,24,.6)';ctx.lineWidth=3.4;ctx.stroke();ctx.strokeStyle=nav.color;ctx.lineWidth=1.8;ctx.stroke();
+    }
     if(S.battery<30)api.stations.forEach(function(p){dot(X(p.door[0]+.5),Y(p.door[1]+.5),3,C.station,true);});
     if(S.damage>0)api.repairs.forEach(function(p){dot(X(p.door[0]+.5),Y(p.door[1]+.5),3,C.repair,true);});
     S.pins.forEach(function(p){dot(X(p.shop.door[0]+.5),Y(p.shop.door[1]+.5),2.6,C.pin,false);});

@@ -175,6 +175,7 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .sw.road{width:28px;height:18px;border-radius:4px;background:linear-gradient(180deg,var(--asphalt) 0 7px,#FFD25E 7px 8px,var(--asphalt) 8px 10px,#FFD25E 10px 11px,var(--asphalt) 11px)}
 .sw.light{width:28px;height:14px;border-radius:4px;background:linear-gradient(90deg,#F04A4A 0 50%,#3BD67A 50%)}
 .sw.con{width:28px;height:14px;border-radius:4px;background:repeating-linear-gradient(-45deg,#F08A24 0 4px,#FFFFFF 4px 8px)}
+.sw.nav{width:28px;height:6px;border-radius:3px;background:repeating-linear-gradient(90deg,#FF5C8A 0 7px,transparent 7px 11px);box-shadow:0 0 0 2px rgba(15,19,24,.35)}
 .sw.me{width:26px;height:22px;border-radius:11px;background:#1B2430;color:var(--signal);box-shadow:0 0 0 2px var(--signal) inset;font-family:var(--f-body);font-size:12px;font-weight:900}
 
 /* Overlay */
@@ -286,7 +287,8 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
   .side-help{display:none}
   .map-wrap{align-items:center;padding-top:0}
   .banner{top:8px;padding:6px 12px;font-size:12px}
-  .toggles{grid-template-columns:1fr 1fr}
+  .toggles{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .toggle{padding:0 10px;font-size:14px}
   .pause-more{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .pad{display:contents;--dpad:clamp(112px,36vh,150px);--brake:clamp(80px,26vh,104px)}
   .pd.brake{grid-area:brake;align-self:end;justify-self:start;font-size:17px}
@@ -337,6 +339,7 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
         <li><span class="sw me">我</span><span><b>「我」字标记</b>：这就是你</span></li>
         <li><span class="sw pin">¥</span><span><b>黄色气泡</b>：待接的单和配送费</span></li>
         <li><span class="sw dest"><span>1</span></span><span><b>编号定位</b>：箱子里的单送到这里</span></li>
+        <li><span class="sw nav"></span><span><b>导航线</b>：带你去最急的那一单，暂停页可关</span></li>
         <li><span class="sw road"></span><span><b>双黄线大路</b>：双向车道，靠右顺着箭头骑</span></li>
         <li><span class="sw light"></span><span><b>停止线</b>：红色代表这个方向的车在等灯</span></li>
         <li><span class="sw txt police">警</span><span><b>交警</b>：路口站岗，巡逻车会追逆行</span></li>
@@ -389,6 +392,7 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
     <div class="toggles">
       <button class="toggle" id="musicToggle" type="button" aria-pressed="true"><span>背景音乐</span><i></i></button>
       <button class="toggle" id="sfxToggle" type="button" aria-pressed="true"><span>音效</span><i></i></button>
+      <button class="toggle" id="navToggle" type="button" aria-pressed="true"><span>导航线</span><i></i></button>
     </div>
     <button class="cta" id="resumeBtn" type="button">接着跑</button>
     <div class="pause-more">
@@ -1002,6 +1006,54 @@ function isWrongWay(){
   return !!ld&&ld===OPP[P.dir];
 }
 
+// ---------- Navigation: a route along the roads to the order in the box that is due soonest ----------
+// Steps against a main-road lane are left out, so the route never sends you the wrong way; roadwork is avoided too.
+const NAV_KEY='lunch-rush-nav';
+let navOn=true;try{navOn=localStorage.getItem(NAV_KEY)!=='off';}catch(e){}
+function legalStep(x,y,d){
+  const nx=x+DIRS[d][0],ny=y+DIRS[d][1];
+  return passable(nx,ny)&&laneDir(x,y)!==OPP[d]&&laneDir(nx,ny)!==OPP[d];
+}
+// steps from every tile to the door, riding only the right way (cached per door)
+const navCache=new Map();
+function navDist(tx,ty){
+  const key=tx+','+ty;
+  if(navCache.has(key))return navCache.get(key);
+  const d=new Int16Array(W*H).fill(-1),q=[tx+ty*W];d[q[0]]=0;let h=0;
+  while(h<q.length){
+    const c=q[h++],cx=c%W,cy=(c/W)|0;
+    DIR_LIST.forEach(function(dir){
+      const px=cx-DIRS[dir][0],py=cy-DIRS[dir][1];
+      if(passable(px,py)&&d[px+py*W]<0&&legalStep(px,py,dir)){d[px+py*W]=d[c]+1;q.push(px+py*W);}
+    });
+  }
+  navCache.set(key,d);
+  return d;
+}
+// The route as points in tiles (tile centres), starting where the rider is; null when there is nothing to guide to.
+function navRoute(){
+  if(!navOn||!S||!S.active.length)return null;
+  let o=S.active[0];
+  S.active.forEach(function(a){if(a.deadline<o.deadline)o=a;});
+  const P=S.player,dist=navDist(o.dest.door[0],o.dest.door[1]),at=function(x,y){return dist[x+y*W]};
+  let x=P.fx,y=P.fy;
+  if(isMoving()){
+    // carry on to the next tile, or turn round if that is shorter and not against the lane
+    const fwd=at(P.tx,P.ty),back=legalStep(P.tx,P.ty,OPP[P.dir])?at(P.fx,P.fy):-1;
+    if(fwd<0&&back<0)return null;
+    if(back<0||(fwd>=0&&1-P.t+fwd<=P.t+back)){x=P.tx;y=P.ty;}
+  }else if(at(x,y)<0)return null;
+  const pts=[playerPos(),[x+.5,y+.5]];let dir=P.dir,guard=0;
+  while(at(x,y)>0&&guard++<W*H){
+    // the next tile one step closer, keeping straight on when there is a choice
+    const opts=DIR_LIST.filter(function(d){return legalStep(x,y,d)&&at(x+DIRS[d][0],y+DIRS[d][1])===at(x,y)-1});
+    if(!opts.length)break;
+    dir=opts.indexOf(dir)>=0?dir:opts[0];
+    x+=DIRS[dir][0];y+=DIRS[dir][1];pts.push([x+.5,y+.5]);
+  }
+  return {pts:pts,color:S.t>o.deadline?C.bad:C.o[o.slot]};
+}
+
 function updateCars(dt){
   const mul=isPeak()?1.1:1;
   const pp=playerPos(),P=S.player;
@@ -1021,10 +1073,11 @@ function updateCars(dt){
       if(g>0&&g<gapMin)gapMin=g;
     });
     if(gapMin<99){const maxAdv=Math.max(0,gapMin-1.35);if((target-c.pos)*lane.dir>maxAdv)target=c.pos+lane.dir*maxAdv;}
-    // brake for a rider in front, unless the rider is riding straight at the car
+    // brake for a rider in front, unless the rider is riding straight at the car;
+    // while the rider is stopped after a crash or by the police, cars behind wait in line instead of driving through
     const cc=carCenter(c);
     const perp=lane.axis==='h'?pp[1]-cc[1]:pp[0]-cc[0];
-    if(Math.abs(perp)<.42&&!S.halt){
+    if(Math.abs(perp)<.42){
       const d=((lane.axis==='h'?pp[0]-cc[0]:pp[1]-cc[1]))*lane.dir;
       const dv=P.dir?DIRS[P.dir]:[0,0];
       const toward=(lane.axis==='h'?dv[0]:dv[1])===-lane.dir&&isMoving();
@@ -1032,7 +1085,7 @@ function updateCars(dt){
         const maxAdv=Math.max(0,d-1.05);
         if((target-c.pos)*lane.dir>maxAdv){
           target=c.pos+lane.dir*maxAdv;
-          if(S.t-c.honk>5&&Math.random()<dt*.9){c.honk=S.t;Sound.play('honk');}
+          if(!S.halt&&S.t-c.honk>5&&Math.random()<dt*.9){c.honk=S.t;Sound.play('honk');}
         }
       }
     }
@@ -1513,6 +1566,16 @@ function drawStationHint(now){
   if(S.battery<30)stations.forEach(function(p){ping(p,C.station,'bolt');});
   if(S.damage>0)repairs.forEach(function(p){ping(p,C.repair,'修');});
 }
+// the navigation line: a dark casing with coloured dashes flowing towards the door
+function drawNav(now){
+  const r=navRoute();if(!r)return;
+  ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();
+  r.pts.forEach(function(q,i){if(i)ctx.lineTo(q[0]*T,q[1]*T);else ctx.moveTo(q[0]*T,q[1]*T);});
+  ctx.strokeStyle='rgba(15,19,24,.35)';ctx.lineWidth=T*.34;ctx.stroke();
+  ctx.strokeStyle=r.color;ctx.lineWidth=T*.18;ctx.setLineDash([T*.3,T*.26]);
+  ctx.lineDashOffset=reduceMotion?0:-(now/1000*T*1.4)%(T*.56);ctx.stroke();
+  ctx.restore();
+}
 function drawDest(now){
   const groups=new Map();
   S.active.forEach(function(o){if(!groups.has(o.dest.id))groups.set(o.dest.id,[]);groups.get(o.dest.id).push(o);});
@@ -1684,7 +1747,7 @@ function draw(now){
   if(S.shake>0&&!reduceMotion){ox=(Math.random()-.5)*6;oy=(Math.random()-.5)*6;}
   ctx.save();ctx.translate(ox,oy);
   ctx.drawImage(staticCanvas,0,0,W*T,H*T);
-  drawStopLines();drawStationHint(now);drawPins(now);drawDest(now);
+  drawStopLines();drawNav(now);drawStationHint(now);drawPins(now);drawDest(now);
   S.cars.forEach(drawCar);
   drawOfficers(now);drawPolice(now);drawPlayer(now);drawRain(now);drawSpot();drawMarker(now);drawFloats();
   ctx.restore();
@@ -1897,6 +1960,10 @@ soundBtn.addEventListener('click',function(){this.blur();toggleAll();});
 musicT.addEventListener('click',function(){Sound.unlock();Sound.set('music',!Sound.prefs.music);applyMusic();syncSoundUI();});
 sfxT.addEventListener('click',function(){Sound.unlock();Sound.set('sfx',!Sound.prefs.sfx);syncSoundUI();Sound.play('pickup');});
 syncSoundUI();
+const navT=$('navToggle');
+function syncNavUI(){navT.setAttribute('aria-pressed',String(navOn));}
+navT.addEventListener('click',function(){navOn=!navOn;try{localStorage.setItem(NAV_KEY,navOn?'on':'off')}catch(e){}syncNavUI();});
+syncNavUI();
 
 // ---------- Legend panel (wide screens): folded by default, remembers whether the player left it open ----------
 const legendBox=$('legendBox'),LEGEND_KEY='lunch-rush-legend';
