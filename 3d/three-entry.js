@@ -8,5 +8,5 @@ export {
   WebGLRenderer, Scene, Fog, PerspectiveCamera, HemisphereLight, DirectionalLight,
   Mesh, Group, BufferGeometry, BufferAttribute, PlaneGeometry, BoxGeometry, CylinderGeometry, ConeGeometry,
   IcosahedronGeometry, RingGeometry, CircleGeometry, MeshLambertMaterial, MeshBasicMaterial, CanvasTexture,
-  Color, Vector3, SRGBColorSpace, PCFShadowMap, DoubleSide
+  Color, Vector3, SRGBColorSpace, PCFShadowMap, DoubleSide, GreaterDepth
 } from 'three';
