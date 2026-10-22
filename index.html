@@ -146,8 +146,17 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
   .o-route .from,.o-meta .due,.o-meta .long{display:inline}
   .o-meta .short{display:none}
   .fee{display:block}
-  .side-help{display:flex;flex-direction:column;gap:10px;margin-top:6px;padding:14px;border-radius:12px;background:var(--panel)}
+  .side-help{display:block;margin-top:6px;border-radius:12px;background:var(--panel)}
 }
+/* Legend panel: folded to one line until the player opens it */
+.side-help summary{display:flex;justify-content:space-between;align-items:center;padding:14px;cursor:pointer;list-style:none;user-select:none;-webkit-user-select:none}
+.side-help summary::-webkit-details-marker{display:none}
+.side-help summary::after{content:"展开 ▾";letter-spacing:0;font-size:12px;font-weight:700;color:var(--signal)}
+.side-help[open] summary{padding-bottom:10px}
+.side-help[open] summary::after{content:"收起 ▴"}
+.side-help summary:focus-visible{outline:2px solid var(--signal);outline-offset:-2px;border-radius:12px}
+.side-help .legend{padding:0 14px}
+.side-help .keys{padding:10px 14px 14px}
 .legend{list-style:none;margin:0;padding:0;display:grid;gap:9px}
 .legend li{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:center;font-size:12.5px;color:var(--muted);line-height:1.45}
 .legend b{color:var(--ink);font-weight:600}
@@ -322,8 +331,8 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
   <aside class="orders">
     <div class="orders-head"><span class="label">外卖箱</span><span id="boxCount">0/3</span></div>
     <ol class="order-list" id="orderList"></ol>
-    <div class="side-help">
-      <span class="label">图例</span>
+    <details class="side-help" id="legendBox">
+      <summary class="label">图例和按键</summary>
       <ul class="legend">
         <li><span class="sw me">我</span><span><b>「我」字标记</b>：这就是你</span></li>
         <li><span class="sw pin">¥</span><span><b>黄色气泡</b>：待接的单和配送费</span></li>
@@ -336,7 +345,7 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
         <li><span class="sw con"></span><span><b>橙白路障</b>：施工封路，得绕</span></li>
       </ul>
       <p class="keys">方向键 / WASD 转向 · 空格 刹车 · P 暂停 · M 静音</p>
-    </div>
+    </details>
   </aside>
 
   <div class="pad" id="pad">
@@ -1888,6 +1897,12 @@ soundBtn.addEventListener('click',function(){this.blur();toggleAll();});
 musicT.addEventListener('click',function(){Sound.unlock();Sound.set('music',!Sound.prefs.music);applyMusic();syncSoundUI();});
 sfxT.addEventListener('click',function(){Sound.unlock();Sound.set('sfx',!Sound.prefs.sfx);syncSoundUI();Sound.play('pickup');});
 syncSoundUI();
+
+// ---------- Legend panel (wide screens): folded by default, remembers whether the player left it open ----------
+const legendBox=$('legendBox'),LEGEND_KEY='lunch-rush-legend';
+try{legendBox.open=localStorage.getItem(LEGEND_KEY)==='open';}catch(e){}
+legendBox.addEventListener('toggle',function(){try{localStorage.setItem(LEGEND_KEY,legendBox.open?'open':'closed')}catch(e){}});
+legendBox.querySelector('summary').addEventListener('click',function(){this.blur();});  // so Space brakes instead of folding it
 
 // ---------- Input ----------
 function setWant(d){if(!S)return;S.want=d;S.wantAt=S.t;S.brake=false;}
