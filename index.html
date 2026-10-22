@@ -269,6 +269,8 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
   .side-help{display:none}
   .map-wrap{align-items:center;padding-top:0}
   .banner{top:8px;padding:6px 12px;font-size:12px}
+  .toggles{grid-template-columns:1fr 1fr}
+  .pause-more{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .pad{display:contents}
   .pd{height:auto}
   .pd[data-dir="up"]{grid-area:up}
@@ -375,7 +377,10 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
       <button class="toggle" id="sfxToggle" type="button" aria-pressed="true"><span>音效</span><i></i></button>
     </div>
     <button class="cta" id="resumeBtn" type="button">接着跑</button>
-    <button class="ghost" id="restartBtn" type="button">重新开一局</button>
+    <div class="pause-more">
+      <button class="ghost" id="endBtn" type="button">结束这局，保存成绩</button>
+      <button class="ghost" id="restartBtn" type="button">重新开一局</button>
+    </div>
   </section>
 
   <section class="card" id="pOver" hidden>
@@ -1738,7 +1743,7 @@ function refreshRider(){
   r.recent.forEach(function(g){
     const d=new Date(g.at),li=document.createElement('li'),when=document.createElement('span'),what=document.createElement('span'),pay=document.createElement('b');
     when.textContent=(d.getMonth()+1)+'/'+d.getDate()+' '+fmtClock(d.getHours()*60+d.getMinutes());
-    pay.textContent=fmtMoney(g.income);what.appendChild(pay);what.appendChild(document.createTextNode(' · 送达 '+g.delivered+' 单 · '+g.rank));
+    pay.textContent=fmtMoney(g.income);what.appendChild(pay);what.appendChild(document.createTextNode(' · 送达 '+g.delivered+' 单 · '+(g.early?'提前收工':g.rank)));
     li.appendChild(when);li.appendChild(what);list.appendChild(li);
   });
 }
@@ -1761,18 +1766,19 @@ function resume(){
   if(state!=='paused')return;state='play';last=performance.now();showPanel(null);
   Sound.unlock();Sound.startMusic(false);Sound.setRain(isRain());
 }
-function endGame(){
+// early: the rider quit from the pause card; the run still counts with whatever was earned so far
+function endGame(early){
   state='over';
   Sound.stopMusic(1.2);Sound.setRain(false);Sound.play('end',.2);
   const st=S.stats,income=Math.round(S.money*10)/10,und=S.active.length,rate=st.delivered?st.onTime/st.delivered:0;
   const rank=income>=150?'单王':income>=100?'金牌骑手':income>=50?'熟练骑手':'新手骑手';
   $('rTitle').textContent=rank;$('rIncome').textContent=fmtMoney(income);
   const r=me(),best=r.best,rec=$('rRecord');
-  $('rEyebrow').textContent='13:30 · 收工 · '+r.name;
+  $('rEyebrow').textContent=(early?fmtClock(START_MIN+Math.floor(S.t))+' · 提前收工':'13:30 · 收工')+' · '+r.name;
   if(income>best&&income>0){r.best=income;rec.textContent='新纪录！';rec.className='record new';}
   else{rec.textContent=best>0?'最好成绩 '+fmtMoney(best):'';rec.className='record';}
   r.games++;r.income=Math.round((r.income+income)*10)/10;r.delivered+=st.delivered;r.onTime+=st.onTime;
-  r.recent.unshift({at:Date.now(),income:income,delivered:st.delivered,rank:rank});r.recent=r.recent.slice(0,10);
+  r.recent.unshift({at:Date.now(),income:income,delivered:st.delivered,rank:rank,early:!!early});r.recent=r.recent.slice(0,10);
   r.synced=false;saveRiders();
   const rb=$('rBoard');rb.hidden=!BOARD_ON;
   if(BOARD_ON){
@@ -1782,7 +1788,7 @@ function endGame(){
       else rb.textContent='已上传。收入是正数才会上榜';
     }).catch(function(){rb.textContent='排行榜暂时连不上，成绩先存在本机，下次打开自动补传';});
   }
-  const items=[['送达',st.delivered+' 单'],['准时率',st.delivered?Math.round(rate*100)+'%':'—'],['时薪',fmtMoney(income/2.5)],['事故',st.crashes+' 次'],['违章',st.tickets+' 次'],['额外支出',fmtMoney(st.spend)],['换电',st.swaps+' 次'],['打赏',st.tips+' 次'],['没送完',und+' 单']];
+  const items=[['送达',st.delivered+' 单'],['准时率',st.delivered?Math.round(rate*100)+'%':'—'],['时薪',S.t>=1?fmtMoney(income/(S.t/60)):'—'],['事故',st.crashes+' 次'],['违章',st.tickets+' 次'],['额外支出',fmtMoney(st.spend)],['换电',st.swaps+' 次'],['打赏',st.tips+' 次'],['没送完',und+' 单']];
   $('rStats').innerHTML=items.map(function(it){return '<div><dt>'+it[0]+'</dt><dd>'+it[1]+'</dd></div>'}).join('');
   let note;
   if(st.delivered===0)note='一单都没送出去。先骑到黄色气泡上接单试试。';
@@ -1833,6 +1839,7 @@ $('bBack').addEventListener('click',function(){showPanel(boardBack);});
 $('startBtn').addEventListener('click',startGame);
 $('againBtn').addEventListener('click',startGame);
 $('restartBtn').addEventListener('click',startGame);
+$('endBtn').addEventListener('click',function(){if(state==='paused')endGame(true);});
 $('resumeBtn').addEventListener('click',resume);
 $('pauseBtn').addEventListener('click',function(){this.blur();if(state==='play')pause();else if(state==='paused')resume();});
 

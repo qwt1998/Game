@@ -58,7 +58,7 @@
 | 配送费、截止时间 | `spawnPin()`、`atDoor()` |
 | 撞车惩罚 | `crash()` |
 | 逆行和交警 | `isWrongWay()`、`caught()`、`updatePolice()` |
-| 结算评级和点评 | `endGame()` |
+| 结算评级和点评 | `endGame()`；暂停页"结束这局，保存成绩"按钮（`endBtn`）调用 `endGame(true)`，算"提前收工" |
 | 排行榜（地址、上传成绩、补传、排行榜页面） | `Leaderboard` 一段（`BOARD_URL`、`syncRider()`），排行榜页面在 `openBoard()`；服务器那边在 `server/leaderboard.py`（上限 `MAX_BEST`、频率限制 `RIDER_GAP`、`IP_PER_HOUR`） |
 | 骑手名字和本机成绩（最好、局数、累计、准时率、最近 10 局） | `Riders` 一段（`newRider()`、`loadRiders()`，存在浏览器的 `lunch-rush-players` 里），开始页显示在 `refreshRider()`，一局结束时在 `endGame()` 里记账 |
 | 背景音乐 | `Sound` 模块里的 `PROG`（和弦）、`HOOK`（主旋律）、`stepAt()`（编曲） |
