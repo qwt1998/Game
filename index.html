@@ -790,7 +790,7 @@ function me(){return riders.list.find(function(r){return r.id===riders.cur});}
 
 // ---------- Leaderboard ----------
 // Scores go to the owner's own server (server/ in the repo). An empty address turns the leaderboard off.
-const BOARD_URL='';
+const BOARD_URL='https://66-42-50-99.sslip.io';
 const BOARD_ON=!!BOARD_URL&&window.self===window.top;
 function boardFetch(path,body){
   const ctl=window.AbortController?new AbortController():null,timer=setTimeout(function(){if(ctl)ctl.abort()},8000);
