@@ -119,10 +119,20 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .pill.warn{background:rgba(251,146,60,.96);color:#1A1F25}
 
 /* Touch pad */
-.pad{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
-.pd{height:52px;border-radius:14px;border:0;background:var(--panel);color:var(--ink);font-size:22px;font-weight:700;touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}
+/* Brake under the left thumb, a round steering pad under the right; the pad's four quarters are the four directions */
+.pad{--dpad:clamp(112px,19vh,168px);--brake:clamp(80px,12.5vh,116px);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 4px}
+.pd{border-radius:14px;border:0;background:var(--panel);color:var(--ink);font-size:22px;font-weight:700;touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}
 .pd:active{background:var(--panel-2)}
-.pd.brake{font-size:15px;color:var(--signal)}
+.pd.brake{flex:none;width:var(--brake);height:var(--brake);border-radius:50%;font-size:19px;color:var(--signal)}
+.pad-hint{flex:1;min-width:0;margin:0;text-align:center;font-size:12px;line-height:1.5;color:var(--muted)}
+.dpad{position:relative;flex:none;width:var(--dpad);height:var(--dpad);border-radius:50%;background:var(--panel);box-shadow:inset 0 0 0 1px var(--line);touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}
+.dpad::after{content:"";position:absolute;left:50%;top:50%;width:22%;height:22%;transform:translate(-50%,-50%);border-radius:50%;background:var(--panel-2)}
+.dpad i{position:absolute;width:36%;height:36%;display:flex;align-items:center;justify-content:center;border-radius:50%;font-style:normal;font-size:28px;font-weight:700;color:var(--ink);pointer-events:none}
+.dpad i[data-dir="up"]{left:32%;top:1%}
+.dpad i[data-dir="down"]{left:32%;bottom:1%}
+.dpad i[data-dir="left"]{left:1%;top:32%}
+.dpad i[data-dir="right"]{right:1%;top:32%}
+.dpad[data-on="up"] i[data-dir="up"],.dpad[data-on="down"] i[data-dir="down"],.dpad[data-on="left"] i[data-dir="left"],.dpad[data-on="right"] i[data-dir="right"]{background:rgba(255,194,61,.2);color:var(--signal)}
 @media (pointer:fine){.pad{display:none}}
 
 /* Wide layout */
@@ -235,20 +245,18 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
   #money{font-size:20px}
   .card h1{font-size:32px}
 }
-/* Phone held sideways: map in the middle at full height, steering keys bottom-left, brake bottom-right */
+/* Phone held sideways: map in the middle at full height, brake bottom-left, steering pad bottom-right */
 @media (orientation:landscape) and (max-height:500px) and (pointer:coarse){
   body{padding-block:8px}
   .app{
-    --pd:clamp(44px,14vh,58px);--side-min:170px;
+    --side-min:170px;
     gap:8px;
-    grid-template-columns:repeat(3,minmax(var(--pd),1fr)) auto minmax(0,3fr);
-    grid-template-rows:auto minmax(0,1fr) repeat(3,var(--pd));
+    grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+    grid-template-rows:auto minmax(0,1fr) auto;
     grid-template-areas:
-      "hud  hud  hud   map orders"
-      ".    .    .     map orders"
-      ".    up   .     map orders"
-      "left .    right map orders"
-      ".    down .     map brake";
+      "hud   map orders"
+      "hint  map orders"
+      "brake map dpad";
   }
   .hud{display:grid;grid-template-columns:auto minmax(0,1fr) 34px 34px;grid-template-areas:"time cash cash cash" "power power sound pause";gap:6px}
   .chip{padding:5px 9px}
@@ -260,7 +268,7 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
   #clock{font-size:20px}
   #money{font-size:20px}
   .orders{overflow:auto;gap:6px}
-  .orders-head{display:flex}
+  .orders-head{display:none}
   .order-list{grid-template-columns:minmax(0,1fr);gap:6px}
   .order{padding:7px 8px;align-items:center}
   .o-route .from,.o-meta .due,.o-meta .long{display:none}
@@ -271,13 +279,10 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
   .banner{top:8px;padding:6px 12px;font-size:12px}
   .toggles{grid-template-columns:1fr 1fr}
   .pause-more{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .pad{display:contents}
-  .pd{height:auto}
-  .pd[data-dir="up"]{grid-area:up}
-  .pd[data-dir="down"]{grid-area:down}
-  .pd[data-dir="left"]{grid-area:left}
-  .pd[data-dir="right"]{grid-area:right}
-  .pd.brake{grid-area:brake;font-size:17px}
+  .pad{display:contents;--dpad:clamp(112px,36vh,150px);--brake:clamp(80px,26vh,104px)}
+  .pd.brake{grid-area:brake;align-self:end;justify-self:start;font-size:17px}
+  .pad-hint{grid-area:hint;align-self:center}
+  .dpad{grid-area:dpad;align-self:end;justify-self:end}
 }
 @media (prefers-reduced-motion:reduce){
   .banner{animation:none}
@@ -335,11 +340,11 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
   </aside>
 
   <div class="pad" id="pad">
-    <button class="pd" type="button" data-dir="left" aria-label="向左">←</button>
-    <button class="pd" type="button" data-dir="up" aria-label="向上">↑</button>
     <button class="pd brake" type="button" data-dir="brake">刹车</button>
-    <button class="pd" type="button" data-dir="down" aria-label="向下">↓</button>
-    <button class="pd" type="button" data-dir="right" aria-label="向右">→</button>
+    <p class="pad-hint">点方向<br>或按住滑动</p>
+    <div class="dpad" id="dpad" role="group" aria-label="方向盘：点哪边就往哪边走">
+      <i data-dir="up" aria-hidden="true">↑</i><i data-dir="left" aria-hidden="true">←</i><i data-dir="right" aria-hidden="true">→</i><i data-dir="down" aria-hidden="true">↓</i>
+    </div>
   </div>
 </div>
 
@@ -1898,9 +1903,26 @@ window.addEventListener('keydown',function(e){
     if(e.key==='p'||e.key==='P'||e.key==='Escape'){e.preventDefault();pause();}
   }else if(state==='paused'&&(e.key==='p'||e.key==='P'||e.key==='Escape')){e.preventDefault();resume();}
 });
-document.querySelectorAll('.pd').forEach(function(b){
-  b.addEventListener('pointerdown',function(e){e.preventDefault();if(state!=='play')return;const d=b.dataset.dir;if(d==='brake')doBrake();else setWant(d);});
-});
+document.querySelector('.pd.brake').addEventListener('pointerdown',function(e){e.preventDefault();if(state==='play')doBrake();});
+// Round steering pad: the thumb's position from the centre picks the direction, so sliding without lifting turns too
+const dpad=$('dpad');let padPtr=null;
+function padDir(e){
+  const r=dpad.getBoundingClientRect(),x=e.clientX-(r.left+r.width/2),y=e.clientY-(r.top+r.height/2);
+  if(Math.hypot(x,y)<r.width*.11)return null;  // dead spot in the middle
+  return Math.abs(x)>Math.abs(y)?(x>0?'right':'left'):(y>0?'down':'up');
+}
+function padSteer(e){
+  const d=padDir(e);if(!d||d===dpad.dataset.on)return;
+  dpad.dataset.on=d;
+  if(state!=='play')return;
+  setWant(d);
+  if(Sound.prefs.sfx&&navigator.vibrate){try{navigator.vibrate(10)}catch(err){}}
+}
+dpad.addEventListener('pointerdown',function(e){e.preventDefault();padPtr=e.pointerId;try{dpad.setPointerCapture(e.pointerId)}catch(err){}dpad.dataset.on='';padSteer(e);});
+dpad.addEventListener('pointermove',function(e){if(e.pointerId===padPtr)padSteer(e);});
+function padRelease(e){if(e.pointerId!==padPtr)return;padPtr=null;delete dpad.dataset.on;}
+dpad.addEventListener('pointerup',padRelease);
+dpad.addEventListener('pointercancel',padRelease);
 let sw=null;
 canvas.addEventListener('pointerdown',function(e){sw={x:e.clientX,y:e.clientY,id:e.pointerId};try{canvas.setPointerCapture(e.pointerId)}catch(err){}});
 canvas.addEventListener('pointermove',function(e){
