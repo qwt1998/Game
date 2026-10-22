@@ -61,7 +61,7 @@
 | 店铺、小区、写字楼等地点 | `PLACE_DEFS`（类型、名字、所占街区、门口坐标） |
 | 车道、红绿灯 | `LANES`、`lightPhase()` |
 | 车流（给骑手让行；骑手出事故或被交警拦下时，后面的车排队等） | `updateCars()` |
-| 导航线（箱子里有单时，指向最快要超时的那一单；不逆行、绕开施工） | 路线在 `navRoute()`；正式版画在 `drawNav()`，3D 版在 `3d/scene.js` 的 `navDots()`；暂停页开关 `navToggle`（存在浏览器的 `lunch-rush-nav` 里） |
+| 导航线（箱子里有单时，指向最快要超时的那一单；不逆行、绕开施工） | 路线在 `navRoute()`；正式版画在 `drawNav()`，3D 版在 `3d/scene.js` 的 `navDots()`；开关在开始页（`navStart`）和暂停页（`navToggle`），两个同步，存在浏览器的 `lunch-rush-nav` 里；第一次玩默认打开 |
 | 配送费、截止时间 | `spawnPin()`、`atDoor()` |
 | 撞车惩罚 | `crash()` |
 | 逆行和交警 | `isWrongWay()`、`caught()`、`updatePolice()` |

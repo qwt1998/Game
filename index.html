@@ -219,6 +219,8 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .player-switch:focus-within{outline:2px solid var(--signal);outline-offset:2px}
 .best{margin:0 0 16px;font-size:12.5px;color:var(--muted)}
 .best b{color:var(--signal);font-family:var(--f-num);font-weight:600}
+.nav-pick{margin:0 0 14px}
+.toggle small{margin-left:8px;font-size:12px;color:var(--muted)}
 .history{margin:12px 0 0;font-size:12.5px;color:var(--muted)}
 .history summary{cursor:pointer;text-align:center}
 .history ol{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px}
@@ -339,7 +341,7 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
         <li><span class="sw me">我</span><span><b>「我」字标记</b>：这就是你</span></li>
         <li><span class="sw pin">¥</span><span><b>黄色气泡</b>：待接的单和配送费</span></li>
         <li><span class="sw dest"><span>1</span></span><span><b>编号定位</b>：箱子里的单送到这里</span></li>
-        <li><span class="sw nav"></span><span><b>导航线</b>：带你去最急的那一单，暂停页可关</span></li>
+        <li><span class="sw nav"></span><span><b>导航线</b>：带你去最急的那一单，开始页和暂停页都能关</span></li>
         <li><span class="sw road"></span><span><b>双黄线大路</b>：双向车道，靠右顺着箭头骑</span></li>
         <li><span class="sw light"></span><span><b>停止线</b>：红色代表这个方向的车在等灯</span></li>
         <li><span class="sw txt police">警</span><span><b>交警</b>：路口站岗，巡逻车会追逆行</span></li>
@@ -379,6 +381,7 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
       <label class="player-switch"><span>换人</span><select id="playerSel" aria-label="换一个骑手"></select></label>
     </div>
     <p class="best" id="bestLine"></p>
+    <button class="toggle nav-pick" id="navStart" type="button" aria-pressed="true"><span>导航线<small>新手推荐打开</small></span><i></i></button>
     <button class="cta" id="startBtn" type="button">开跑</button>
     <button class="ghost" id="boardBtn" type="button" hidden>排行榜</button>
     <details class="history" id="history" hidden><summary id="historySum"></summary><ol id="historyList"></ol></details>
@@ -1960,9 +1963,10 @@ soundBtn.addEventListener('click',function(){this.blur();toggleAll();});
 musicT.addEventListener('click',function(){Sound.unlock();Sound.set('music',!Sound.prefs.music);applyMusic();syncSoundUI();});
 sfxT.addEventListener('click',function(){Sound.unlock();Sound.set('sfx',!Sound.prefs.sfx);syncSoundUI();Sound.play('pickup');});
 syncSoundUI();
-const navT=$('navToggle');
-function syncNavUI(){navT.setAttribute('aria-pressed',String(navOn));}
-navT.addEventListener('click',function(){navOn=!navOn;try{localStorage.setItem(NAV_KEY,navOn?'on':'off')}catch(e){}syncNavUI();});
+// the navigation switch sits on the start page and the pause page; both show the same setting
+const navTs=[$('navStart'),$('navToggle')];
+function syncNavUI(){navTs.forEach(function(b){b.setAttribute('aria-pressed',String(navOn));});}
+navTs.forEach(function(b){b.addEventListener('click',function(){navOn=!navOn;try{localStorage.setItem(NAV_KEY,navOn?'on':'off')}catch(e){}syncNavUI();});});
 syncNavUI();
 
 // ---------- Legend panel (wide screens): folded by default, remembers whether the player left it open ----------
