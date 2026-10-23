@@ -130,20 +130,29 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .pill.warn{background:rgba(251,146,60,.96);color:#1A1F25}
 
 /* Touch pad */
-/* Brake under the left thumb, a round steering pad under the right; the pad's four quarters are the four directions */
+/* Brake under the left thumb, a steering stick under the right; which quarter the thumb pushes into is the direction */
 .pad{--dpad:clamp(112px,19vh,168px);--brake:clamp(80px,12.5vh,116px);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 4px}
 .pd{border-radius:14px;border:0;background:var(--panel);color:var(--ink);font-size:22px;font-weight:700;touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}
 .pd:active{background:var(--panel-2)}
-.pd.brake{flex:none;width:var(--brake);height:var(--brake);border-radius:50%;font-size:19px;color:var(--signal)}
+.pd.brake{flex:none;width:var(--brake);height:var(--brake);border-radius:50%;font-size:19px;letter-spacing:.1em;color:var(--signal);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;box-shadow:inset 0 0 0 1px var(--line)}
+.pd.brake::before{content:"";width:34%;height:34%;box-sizing:border-box;border-radius:50%;border:3px solid currentColor;background:radial-gradient(circle,currentColor 0 28%,transparent 30%)}
+.pd.brake:active{background:rgba(255,194,61,.18)}
 .pad-hint{flex:1;min-width:0;margin:0;text-align:center;font-size:12px;line-height:1.5;color:var(--muted)}
-.dpad{position:relative;flex:none;width:var(--dpad);height:var(--dpad);border-radius:50%;background:var(--panel);box-shadow:inset 0 0 0 1px var(--line);touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}
-.dpad::after{content:"";position:absolute;left:50%;top:50%;width:22%;height:22%;transform:translate(-50%,-50%);border-radius:50%;background:var(--panel-2)}
-.dpad i{position:absolute;width:36%;height:36%;display:flex;align-items:center;justify-content:center;border-radius:50%;font-style:normal;font-size:28px;font-weight:700;color:var(--ink);pointer-events:none}
-.dpad i[data-dir="up"]{left:32%;top:1%}
-.dpad i[data-dir="down"]{left:32%;bottom:1%}
-.dpad i[data-dir="left"]{left:1%;top:32%}
-.dpad i[data-dir="right"]{right:1%;top:32%}
-.dpad[data-on="up"] i[data-dir="up"],.dpad[data-on="down"] i[data-dir="down"],.dpad[data-on="left"] i[data-dir="left"],.dpad[data-on="right"] i[data-dir="right"]{background:rgba(255,194,61,.2);color:var(--signal)}
+/* Steering stick: a round base with a knob that follows the thumb; the way the knob leans is the way the rider turns */
+.dpad{--kx:0px;--ky:0px;position:relative;flex:none;width:var(--dpad);height:var(--dpad);border-radius:50%;background:radial-gradient(circle,var(--panel-2) 0 27%,var(--panel) 28%);box-shadow:inset 0 0 0 1px var(--line);touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}
+.dpad::after{content:"";position:absolute;left:50%;top:50%;width:44%;height:44%;border-radius:50%;transform:translate(calc(-50% + var(--kx)),calc(-50% + var(--ky)));background:radial-gradient(circle at 38% 32%,#46525F,#27313B 72%);box-shadow:0 6px 14px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.1);transition:transform .16s ease-out;pointer-events:none}
+.dpad.held::after{transition:none;box-shadow:0 6px 14px rgba(0,0,0,.45),inset 0 0 0 2px var(--signal)}
+.dpad i{position:absolute;width:20%;height:20%;display:flex;align-items:center;justify-content:center;color:var(--muted);pointer-events:none}
+.dpad i::before{content:"";width:34%;height:34%;border-top:3px solid currentColor;border-left:3px solid currentColor;border-radius:2px}
+.dpad i[data-dir="up"]{left:40%;top:3%}
+.dpad i[data-dir="up"]::before{transform:translateY(25%) rotate(45deg)}
+.dpad i[data-dir="down"]{left:40%;bottom:3%}
+.dpad i[data-dir="down"]::before{transform:translateY(-25%) rotate(225deg)}
+.dpad i[data-dir="left"]{left:3%;top:40%}
+.dpad i[data-dir="left"]::before{transform:translateX(25%) rotate(-45deg)}
+.dpad i[data-dir="right"]{right:3%;top:40%}
+.dpad i[data-dir="right"]::before{transform:translateX(-25%) rotate(135deg)}
+.dpad[data-on="up"] i[data-dir="up"],.dpad[data-on="down"] i[data-dir="down"],.dpad[data-on="left"] i[data-dir="left"],.dpad[data-on="right"] i[data-dir="right"]{color:var(--signal)}
 @media (pointer:fine){.pad{display:none}}
 
 /* Wide layout */
@@ -342,18 +351,9 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
   .board,#map{border-radius:12px}
   .board{box-shadow:0 0 0 3px var(--panel),0 12px 30px rgba(0,0,0,.45)}
   .pad{--k:clamp(104px,16.5vh,136px);gap:10px;padding:0 2px}
-  .pd.brake{width:var(--k);height:var(--k);border-radius:22px;font-size:20px;letter-spacing:.1em;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;box-shadow:inset 0 0 0 1px var(--line)}
-  .pd.brake::before{content:"";width:34%;height:34%;box-sizing:border-box;border-radius:50%;border:3px solid currentColor;background:radial-gradient(circle,currentColor 0 28%,transparent 30%)}
-  .pd.brake:active{background:rgba(255,194,61,.18)}
+  .pd.brake{width:var(--k);height:var(--k);font-size:20px}
   .pad-hint{font-size:11.5px}
-  /* the steering pad is drawn as a cross of four keys; the whole square still takes touches */
-  .dpad{width:var(--k);height:var(--k);border-radius:0;background:none;box-shadow:none}
-  .dpad::after{width:34%;height:34%;border-radius:6px;background:var(--panel)}
-  .dpad i{width:34%;height:34%;border-radius:12px;background:var(--panel);font-size:24px;box-shadow:inset 0 0 0 1px var(--line)}
-  .dpad i[data-dir="up"]{left:33%;top:0}
-  .dpad i[data-dir="down"]{left:33%;bottom:0}
-  .dpad i[data-dir="left"]{left:0;top:33%}
-  .dpad i[data-dir="right"]{right:0;top:33%}
+  .dpad{width:var(--k);height:var(--k)}
 }
 @media (max-width:380px) and (orientation:portrait){
   .chip{padding:4px 8px}
@@ -399,7 +399,7 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
   .toggles{grid-template-columns:repeat(3,minmax(0,1fr))}
   .toggle{padding:0 10px;font-size:14px}
   .pause-more{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .pad{display:contents;--dpad:clamp(112px,36vh,150px);--brake:clamp(80px,26vh,104px)}
+  .pad{display:contents;--dpad:clamp(112px,36vh,150px);--brake:var(--dpad)}
   .pd.brake{grid-area:brake;align-self:end;justify-self:start;font-size:17px}
   .pad-hint{grid-area:hint;align-self:center}
   .dpad{grid-area:dpad;align-self:end;justify-self:end}
@@ -463,9 +463,9 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 
   <div class="pad" id="pad">
     <button class="pd brake" type="button" data-dir="brake">刹车</button>
-    <p class="pad-hint">点方向键<br>或在地图上滑</p>
-    <div class="dpad" id="dpad" role="group" aria-label="方向盘：点哪边就往哪边走">
-      <i data-dir="up" aria-hidden="true">↑</i><i data-dir="left" aria-hidden="true">←</i><i data-dir="right" aria-hidden="true">→</i><i data-dir="down" aria-hidden="true">↓</i>
+    <p class="pad-hint">按住摇杆推<br>或在地图上滑</p>
+    <div class="dpad" id="dpad" role="group" aria-label="摇杆：往哪边推就往哪边走">
+      <i data-dir="up" aria-hidden="true"></i><i data-dir="left" aria-hidden="true"></i><i data-dir="right" aria-hidden="true"></i><i data-dir="down" aria-hidden="true"></i>
     </div>
   </div>
 </div>
@@ -2850,12 +2850,18 @@ window.addEventListener('keydown',function(e){
   }else if(state==='paused'&&(e.key==='p'||e.key==='P'||e.key==='Escape')){e.preventDefault();resume();}
 });
 document.querySelector('.pd.brake').addEventListener('pointerdown',function(e){e.preventDefault();if(state==='play')doBrake();});
-// Round steering pad: the thumb's position from the centre picks the direction, so sliding without lifting turns too
+// Steering stick: the thumb's position from the centre picks the direction, so sliding without lifting turns too
 const dpad=$('dpad');let padPtr=null;
 function padDir(e){
   const r=dpad.getBoundingClientRect(),x=e.clientX-(r.left+r.width/2),y=e.clientY-(r.top+r.height/2);
   if(Math.hypot(x,y)<r.width*.11)return null;  // dead spot in the middle
   return Math.abs(x)>Math.abs(y)?(x>0?'right':'left'):(y>0?'down':'up');
+}
+// the knob follows the thumb but stays inside the base; letting go springs it back to the middle
+function padKnob(e){
+  const r=dpad.getBoundingClientRect(),max=r.width*.28;let x=0,y=0;
+  if(e){x=e.clientX-(r.left+r.width/2);y=e.clientY-(r.top+r.height/2);const l=Math.hypot(x,y);if(l>max){x*=max/l;y*=max/l;}}
+  dpad.style.setProperty('--kx',x.toFixed(1)+'px');dpad.style.setProperty('--ky',y.toFixed(1)+'px');
 }
 function padSteer(e){
   const d=padDir(e);if(!d||d===dpad.dataset.on)return;
@@ -2864,9 +2870,9 @@ function padSteer(e){
   setWant(d);
   if(Sound.prefs.sfx&&navigator.vibrate){try{navigator.vibrate(10)}catch(err){}}
 }
-dpad.addEventListener('pointerdown',function(e){e.preventDefault();padPtr=e.pointerId;try{dpad.setPointerCapture(e.pointerId)}catch(err){}dpad.dataset.on='';padSteer(e);});
-dpad.addEventListener('pointermove',function(e){if(e.pointerId===padPtr)padSteer(e);});
-function padRelease(e){if(e.pointerId!==padPtr)return;padPtr=null;delete dpad.dataset.on;}
+dpad.addEventListener('pointerdown',function(e){e.preventDefault();padPtr=e.pointerId;try{dpad.setPointerCapture(e.pointerId)}catch(err){}dpad.dataset.on='';dpad.classList.add('held');padKnob(e);padSteer(e);});
+dpad.addEventListener('pointermove',function(e){if(e.pointerId===padPtr){padKnob(e);padSteer(e);}});
+function padRelease(e){if(e.pointerId!==padPtr)return;padPtr=null;delete dpad.dataset.on;dpad.classList.remove('held');padKnob(null);}
 dpad.addEventListener('pointerup',padRelease);
 dpad.addEventListener('pointercancel',padRelease);
 let sw=null;
