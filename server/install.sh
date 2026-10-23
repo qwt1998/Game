@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 跑单王排行榜：一键安装（Ubuntu 22.04 / 24.04，用 root 账号运行）
+# 跑单王排行榜和对战：一键安装（Ubuntu 22.04 / 24.04，用 root 账号运行）
 #
 #   curl -fsSL https://qwt1998.github.io/Game/server/install.sh | bash
 #
@@ -8,7 +8,8 @@
 #   curl -fsSL https://qwt1998.github.io/Game/server/install.sh | bash -s 你的域名
 #
 # 再运行一次就是更新到仓库里的最新版，成绩不会丢。
-# Caddy 负责加密连接（https）和自动续证书；排行榜程序只在本机 8787 端口上，不直接对外。
+# Caddy 负责加密连接（https）和自动续证书；排行榜程序只在本机 8787 端口上，
+# 对战程序只在本机 8788 端口上（网址里的 /vs 转给它），都不直接对外。
 
 set -euo pipefail
 
@@ -48,15 +49,20 @@ main(){
   apt-get update -qq </dev/null
   apt-get install -y -qq caddy python3 curl </dev/null >/dev/null
 
-  say "下载排行榜程序"
+  say "下载排行榜和对战程序"
   id paodan >/dev/null 2>&1 || useradd --system --home-dir /var/lib/paodan --shell /usr/sbin/nologin paodan
   install -d -o paodan -g paodan -m 750 /var/lib/paodan
   install -d -m 755 /opt/paodan
-  curl -fsSL "$SRC/leaderboard.py" -o /opt/paodan/leaderboard.py.new
-  python3 -c "import ast,sys;ast.parse(open(sys.argv[1]).read())" /opt/paodan/leaderboard.py.new \
-    || fail "下载的程序不完整，过一会儿再运行一次"
-  mv /opt/paodan/leaderboard.py.new /opt/paodan/leaderboard.py
-  chmod 644 /opt/paodan/leaderboard.py
+  local f
+  for f in leaderboard.py versus.py; do
+    curl -fsSL "$SRC/$f" -o "/opt/paodan/$f.new"
+    python3 -c "import ast,sys;ast.parse(open(sys.argv[1]).read())" "/opt/paodan/$f.new" \
+      || fail "下载的程序不完整，过一会儿再运行一次"
+  done
+  for f in leaderboard.py versus.py; do
+    mv "/opt/paodan/$f.new" "/opt/paodan/$f"
+    chmod 644 "/opt/paodan/$f"
+  done
 
   cat >/etc/systemd/system/paodan.service <<'UNIT'
 [Unit]
@@ -80,6 +86,26 @@ ReadWritePaths=/var/lib/paodan
 WantedBy=multi-user.target
 UNIT
 
+  cat >/etc/systemd/system/paodan-vs.service <<'UNIT'
+[Unit]
+Description=跑单王对战
+After=network.target
+
+[Service]
+User=paodan
+Group=paodan
+ExecStart=/usr/bin/python3 -I /opt/paodan/versus.py
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
   # admin shortcut: paodan list / paodan hide 名字 / paodan unhide 名字
   cat >/usr/local/bin/paodan <<'CMD'
 #!/bin/sh
@@ -92,10 +118,15 @@ CMD
     cp /etc/caddy/Caddyfile "/etc/caddy/Caddyfile.bak.$(date +%Y%m%d%H%M%S)"
   fi
   cat >/etc/caddy/Caddyfile <<CADDY
-# 跑单王排行榜（由 install.sh 生成，再运行一次 install.sh 会覆盖）
+# 跑单王排行榜和对战（由 install.sh 生成，再运行一次 install.sh 会覆盖）
 $host {
-	encode gzip
-	reverse_proxy 127.0.0.1:8787
+	handle /vs* {
+		reverse_proxy 127.0.0.1:8788
+	}
+	handle {
+		encode gzip
+		reverse_proxy 127.0.0.1:8787
+	}
 }
 CADDY
 
@@ -105,16 +136,17 @@ CADDY
   fi
 
   systemctl daemon-reload
-  systemctl enable paodan caddy >/dev/null 2>&1
-  systemctl restart paodan
+  systemctl enable paodan paodan-vs caddy >/dev/null 2>&1
+  systemctl restart paodan paodan-vs
   systemctl restart caddy
 
   say "等加密证书（第一次大约要半分钟到一分钟）"
   local i
   for i in $(seq 1 40); do
-    if curl -fsS --max-time 5 "https://$host/api/ping" >/dev/null 2>&1; then
+    if curl -fsS --max-time 5 "https://$host/api/ping" >/dev/null 2>&1 && curl -fsS --max-time 5 "https://$host/vs/ping" >/dev/null 2>&1; then
       printf '\n\033[1;32m装好了！把下面这一行发给 Claude：\033[0m\n\n    排行榜地址 https://%s\n\n' "$host"
       printf '再用手机流量（不开代理）打开这个测试地址，看到 "ok": true 就说明国内能连上：\n\n    https://%s/api/ping\n\n' "$host"
+      printf '对战也装好了，检查地址：https://%s/vs/ping\n\n' "$host"
       printf '以后管理排行榜：paodan list 看前 50 名；paodan hide 名字 藏起造假的成绩；paodan unhide 名字 恢复。\n'
       return 0
     fi
@@ -124,7 +156,7 @@ CADDY
   printf '\n\033[1;31m排行榜程序装好了，但外面还连不上 https://%s\033[0m\n' "$host" >&2
   printf '最常见的原因：Vultr 后台给这台服务器开了防火墙（Firewall），没放行 80 和 443 端口。\n' >&2
   printf '放行以后，再运行一次同样的安装命令就行。还不行的话，把下面这几行发给 Claude：\n\n' >&2
-  systemctl is-active paodan caddy >&2 || true
+  systemctl is-active paodan paodan-vs caddy >&2 || true
   journalctl -u caddy -n 12 --no-pager 2>/dev/null | tail -n 12 >&2 || true
   exit 1
 }

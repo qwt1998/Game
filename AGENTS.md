@@ -26,9 +26,10 @@
   - `manifest.webmanifest`：桌面名字"跑单王"、图标、全屏打开。
   - `sw.js`：离线用。先联网取最新版，断网才用存下的副本，所以平时改 `index.html` 不用动它；新增需要离线的文件时，加进它的 `FILES` 列表，并把 `CACHE` 里的版本号加一。
   - `icons/`：桌面图标。`icons/icon.html` 用 Canvas 画出图标，改图标就改这个文件，再导出同名的 `icon-512.png`、`icon-192.png`、`apple-touch-icon.png`（180×180）替换旧图。
-- `server/`：排行榜程序，跑在仓库主人自己的 Vultr 服务器上（新加坡，Ubuntu 24.04），不在 GitHub Pages 上运行，游戏离了它也照常能玩。
+- `server/`：排行榜和对战程序，跑在仓库主人自己的 Vultr 服务器上（新加坡，Ubuntu 24.04，1 核 1GB 内存），不在 GitHub Pages 上运行，游戏离了它也照常能玩（只是没有排行榜和对战）。
   - `server/leaderboard.py`：只用 Python 自带功能的小网页服务，成绩存在服务器的 SQLite 文件里。收成绩 `/api/sync`，取前 20 名 `/api/top`。
-  - `server/install.sh`：一键安装和更新，用 Caddy 配加密连接（https）。没有域名时用"IP.sslip.io"当网址。
+  - `server/versus.py`：对战传话程序，只用 Python 自带功能，什么都不存盘，房间放在内存里。WebSocket（一种一直连着的网页连接）地址是 `/vs`，检查在不在是 `/vs/ping`。它只负责配对、定好两边同时开跑的时刻、互相转发位置和收入；城市（车、单子）两部手机各算各的。
+  - `server/install.sh`：一键安装和更新两个程序（`paodan` 和 `paodan-vs` 两个服务），用 Caddy 配加密连接（https），`/vs` 开头的转给对战程序（本机 8788 端口），其余转给排行榜（8787）。没有域名时用"IP.sslip.io"当网址。
   - 游戏里的 `BOARD_URL` 是排行榜地址，空着就不显示排行榜。服务器的登录信息不进仓库，也不要向仓库主人要。
 - 3D 试玩版（`qwt1998.github.io/Game/3d.html`）：玩法、按键、记录、排行榜和正式版完全一样，只有地图画成斜着看的 3D 城市。
   - `3d.html` 是**生成出来的**，不要手改。它由 `3d/make.py` 照着 `index.html` 生成，只在几个固定的地方做了替换。**每次改完 `index.html` 都运行一次 `python3 3d/make.py`**，再一起提交，两个版本才会一致。`make.py` 找不到要替换的地方时会报错停下，这时改 `make.py` 里对应的那一行。
@@ -50,6 +51,7 @@
 - 界面文字用简体中文。
 - 同时支持键盘（方向键 / WASD / 空格 / P / M）和手机触控（滑动 + 底部按键），手机宽度约 400px 时不能出现横向滚动。
 - 声音必须在玩家点击后才启动（浏览器限制），静音设置要继续生效。
+- 改了玩法规则或数值（车速、价格、罚款、地图、出单规则等），把脚本里的 `VS_VER` 改成当天日期。对战时两边的 `VS_VER` 必须一样，这样开着旧页面的人就不会和新版本的人对战，规则对不上。
 
 ## 代码地图（都在 `<script>` 里）
 
@@ -66,6 +68,7 @@
 | 撞车惩罚 | `crash()` |
 | 逆行和交警 | `isWrongWay()`、`caught()`、`updatePolice()` |
 | 结算评级和点评 | `endGame()`；暂停页"结束这局，保存成绩"按钮（`endBtn`）调用 `endGame(true)`，算"提前收工" |
+| 和朋友对战（开房间、加入、准备、同时开跑、看到对手、掉线重连） | `Versus` 一段（`VS_VER`、`vsOn()` 收消息、`vsBegin()` 开跑、`vsStep()` 每一帧：钟跟着真实时间走、发自己的位置）；对手画在 `drawRival()`，3D 版在 `3d/scene.js` 的 `rival`、`rivalTag()`；房间页面是 HTML 里的 `#pVs`；服务器那边在 `server/versus.py` |
 | 排行榜（地址、上传成绩、补传、排行榜页面） | `Leaderboard` 一段（`BOARD_URL`、`syncRider()`），排行榜页面在 `openBoard()`；服务器那边在 `server/leaderboard.py`（上限 `MAX_BEST`、频率限制 `RIDER_GAP`、`IP_PER_HOUR`） |
 | 骑手名字和本机成绩（最好、局数、累计、准时率、最近 10 局） | `Riders` 一段（`newRider()`、`loadRiders()`，存在浏览器的 `lunch-rush-players` 里），开始页显示在 `refreshRider()`，一局结束时在 `endGame()` 里记账 |
 | 手机触控按键（左下刹车、右下圆形方向盘，按住滑动也能转向） | HTML 里的 `#pad`；样式 `.pad`、`.dpad`（横屏在 `orientation:landscape` 那段）；手势 `padDir()`、`padSteer()` |
@@ -82,6 +85,7 @@
 - 改了玩法数值的，跑完一整局（约 2 分半）看结算是否合理。
 - 改了添加到桌面相关的东西（`manifest.webmanifest`、`sw.js`、`icons/`、`APP_HOST` 一段）的：用本地网页服务器打开（直接双击文件不算数），确认图标和这几个文件都能加载、浏览器没有报"不能安装"，断网后刷新还能打开。
 - 3D 试玩版：用本地网页服务器打开 `3d.html`（无头浏览器加 `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader` 才有 3D），开一局截图，确认控制台没有报错、地图上的文字和 3D 物体对得上。软件渲染很慢，游戏时间会走得比实际慢，属正常。
+- 改了对战的：在本机跑 `PAODAN_VS_PORT=8799 python3 server/versus.py`，再用 Caddy 照 `install.sh` 里的样子把 `/vs` 转过去，测试副本里的 `BOARD_URL` 临时指向它（不要提交）。开两个无头浏览器，一个开房间、一个输房间号加入，都点准备。要测到：两边的钟一样、互相看得到对方、暂停时钟不停、断网后自己重连、一方关掉页面 30 秒后另一方收到"离开了"、单人模式不受影响。注意：浏览器会拦下"临时替换内容的页面去访问本机端口"，所以测试副本要真的存成文件，再用本地网页服务器打开。
 - 改了排行榜的：在本机用 `PAODAN_DB=临时文件 PAODAN_PORT=8799 python3 server/leaderboard.py serve` 跑一个测试排行榜，把游戏副本里的 `BOARD_URL` 临时指向 `http://127.0.0.1:8799` 测（不要把这个测试地址提交进仓库）。要测到：正常上传、造假成绩被拒、名字里的符号按文字显示、排行榜连不上时游戏照常能玩。改了 `install.sh` 的至少跑 `bash -n` 检查语法。
 
 ## 改完怎么汇报

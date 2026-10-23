@@ -133,6 +133,8 @@ window.Paodan3D=function(api){
   const rider=scooter(C.rider,'#2B3A4B','#FFFFFF',false,C.rider);rider.rotation.order='YXZ';rider.scale.setScalar(1.35);scene.add(rider);
   const sirenR=new THREE.MeshBasicMaterial({color:0xFF3B47}),sirenB=new THREE.MeshBasicMaterial({color:0x3B7BFF}),sirenOff=new THREE.MeshLambertMaterial({color:0x7FA2E8});
   const police=scooter('#F5F7FA','#1E2B44','#FFFFFF',true,C.police);scene.add(police);
+  // the rival in a versus race: a lime scooter, same size as the rider
+  const rival=scooter(C.vs,'#33402A','#FFFFFF',false,C.vs);rival.rotation.order='YXZ';rival.scale.setScalar(1.35);rival.visible=false;scene.add(rival);
 
   // ---------- Flat marks on the road (rings, glows), reused every frame ----------
   const ringThin=flatGeo(new THREE.RingGeometry(.86,1,40)),ringThick=flatGeo(new THREE.RingGeometry(.7,1,40)),disc=flatGeo(new THREE.CircleGeometry(1,40));
@@ -227,6 +229,8 @@ window.Paodan3D=function(api){
     stepDebris(dt);
     const Q=S.police,qx=Q.fx+(Q.tx-Q.fx)*Q.t+.5,qz=Q.fy+(Q.ty-Q.fy)*Q.t+.5,chase=Q.mode==='chase',blink=Math.floor(now/140)%2===0;
     police.position.set(qx,0,qz);turn(police,Q.facing,dt);
+    const R=api.vsRival();rival.visible=!!R;
+    if(R){rival.position.set(R.sx,0,R.sy);turn(rival,R.f,dt);}
     police.userData.siren.material=chase?(blink?sirenR:sirenB):sirenOff;
     stopLines.forEach(function(s){s.m.material=s.lamp.material=api.lightPhase(s.i)===s.axis?goMat:stopMat;});
 
@@ -242,6 +246,7 @@ window.Paodan3D=function(api){
     S.active.forEach(function(o){const d=destAt(o);mark(ringThin,d[0],d[1],.2+.4*k,S.t>o.deadline?C.bad:C.o[o.slot],1-k);});
     const nav=api.navRoute();if(nav)navDots(nav,now);
     if(chase)mark(disc,qx,qz,.7,blink?'#F03C46':'#3C6EF0',.35);
+    if(R)mark(disc,R.sx,R.sy,.55,C.vs,R.away?.15:.35);
     const ring=wrong?C.bad:C.rider;
     mark(disc,pp[0],pp[1],.6,ring,.4);mark(ringThin,pp[0],pp[1],.6,'#FFFFFF',.9);
     if(api.reduceMotion)mark(ringThin,pp[0],pp[1],.9,ring,.85);
@@ -290,7 +295,7 @@ window.Paodan3D=function(api){
     if(S.damage>0)api.repairs.forEach(function(p){glyph(p,'修',C.repair);});
     pinBubbles(now);destPins(now);
     S.puffs.forEach(function(p){const s=P(p.x,p.y,.35),t=K(p.x,p.y,.35);ctx.fillStyle='rgba(90,96,104,'+(p.life*.5)+')';circle(ctx,s[0],s[1],t*(.12+(1-p.life)*.18));ctx.fill();});
-    whistle();rainLayer(now);spotlight();marker(now);floats();arrows();minimap(now);
+    rivalTag();whistle();rainLayer(now);spotlight();marker(now);floats();arrows();minimap(now);
   }
 
   // ---------- Minimap in the bottom-right corner: the whole town, where you are and where to go ----------
@@ -330,6 +335,7 @@ window.Paodan3D=function(api){
     S.active.forEach(function(o){const d=destAt(o);dot(X(d[0]),Y(d[1]),3.4,S.t>o.deadline?C.bad:C.o[o.slot],true);});
     const Q=S.police;
     dot(X(Q.fx+(Q.tx-Q.fx)*Q.t+.5),Y(Q.fy+(Q.ty-Q.fy)*Q.t+.5),2.6,Q.mode==='chase'&&Math.floor(now/200)%2?C.bad:C.police,false);
+    const R=api.vsRival();if(R)dot(X(R.sx),Y(R.sy),3.6,C.vs,true);
     // the rider is an arrow pointing the way they face
     const pp=api.playerPos(),st=STEP[S.player.facing]||[0,1];
     ctx.translate(X(pp[0]),Y(pp[1]));ctx.rotate(Math.atan2(st[1],st[0]));
@@ -380,6 +386,18 @@ window.Paodan3D=function(api){
     ctx.fillStyle='rgba(20,30,20,.22)';rr(ctx,cx-pw/2,cy-ph/2+1.5,pw,ph,ph/2);ctx.fill();
     ctx.fillStyle='rgba(255,255,255,.95)';rr(ctx,cx-pw/2,cy-ph/2,pw,ph,ph/2);ctx.fill();
     ctx.fillStyle=C.label;ctx.fillText(text,cx,cy+.5);
+  }
+  // the rival's name (and what is holding them up) over their scooter
+  function rivalTag(){
+    const R=api.vsRival();if(!R)return;
+    const s=P(R.sx,R.sy,1.35),t=Math.min(K(R.sx,R.sy,1),34);if(!seen(s,60))return;
+    const txt=api.rivalTag(R),fs=clamp(Math.round(t*.44),11,15);
+    ctx.font='700 '+fs+'px '+FONT;ctx.textAlign='center';ctx.textBaseline='middle';
+    const tw=ctx.measureText(txt).width+14,th=fs+8,cx=clamp(s[0],tw/2+3,Wpx-tw/2-3),cy=Math.max(th/2+3,s[1]-th/2-t*.15);
+    ctx.globalAlpha=R.away?.45:1;
+    ctx.fillStyle='rgba(15,19,24,.85)';rr(ctx,cx-tw/2,cy-th/2,tw,th,th/2);ctx.fill();
+    ctx.strokeStyle=C.vs;ctx.lineWidth=2;rr(ctx,cx-tw/2,cy-th/2,tw,th,th/2);ctx.stroke();
+    ctx.fillStyle=C.vs;ctx.fillText(txt,cx,cy+1);ctx.globalAlpha=1;
   }
   function glyph(p,g,col){
     const x=p.door[0]+.5,z=p.door[1]+.5,s=P(x,z,.03),t=Math.min(K(x,z,.03),40);
