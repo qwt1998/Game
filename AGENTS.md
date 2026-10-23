@@ -70,7 +70,7 @@
 | 逆行和交警 | `isWrongWay()`、`caught()`、`updatePolice()` |
 | 结算评级和点评 | `endGame()`；暂停页"结束这局，保存成绩"按钮（`endBtn`）调用 `endGame(true)`，算"提前收工" |
 | 和朋友对战（开房间、申请加入和房主同意、准备、同时开跑、看到对手、抢同一批单、谁赢、掉线重连） | `Versus` 一段（`VS_VER`、`vsOn()` 收消息、`vsBegin()` 开跑、`vsPlan()` 整局出单表、`vsGone()` 单被对手接走、`vsStep()` 每一帧：钟跟着真实时间走、发自己的位置、`vsResult()` 结算谁赢）；对手画在 `drawRival()`，3D 版在 `3d/scene.js` 的 `rival`、`rivalTag()`；房间页面是 HTML 里的 `#pVs`；服务器那边在 `server/versus.py` |
-| 分享（海报、一点就开的卡片、对战邀请） | `Sharing` 一段：`shareInfo()` 每个地方分享说什么，`openShare()` 打开分享页，`shareCard()` 发卡片（微信里提示点右上角"发送给朋友"，并把网页标题和地址换成邀请；别的浏览器调手机的分享菜单；电脑上复制文字），`LINK_ROOM`、`vsFromLink()`（打开带 `?room=1234` 的地址就自动申请加入这个房间）；海报画在 `Poster` 一段，骑手画是从 `icons/icon.html` 复制的（改画两边一起改），二维码由 `qrMatrix()` 自己生成，不连外网 |
+| 分享（海报、一点就开的卡片、对战邀请） | `Sharing` 一段：`shareInfo()` 每个地方分享说什么，`openShare()` 打开分享页，`shareCard()` 发卡片（微信里提示点右上角"发送给朋友"，并把网页标题和地址换成邀请；别的浏览器调手机的分享菜单；电脑上复制文字），`LINK_ROOM`、`vsFromLink()`（打开带 `?room=1234` 的地址就自动申请加入这个房间）；海报画在 `Poster` 一段，骑手画是从 `icons/icon.html` 复制的（改画两边一起改），二维码由 `qrMatrix()` 自己生成，不连外网；三种样式在 `POSTER_STYLES`：微信版带二维码（`draw()`），小红书 3:4 和抖音封面 9:16 不带二维码（`drawSocial()`，抖音封面的重要内容要留在中间 3:4 的范围里）；海报是给别人看的，用第一人称（"我赢了"），对战邀请只出微信版 |
 | 链接预览（QQ、iPhone 短信、飞书里显示的标题、简介、大图） | `<body>` 开头 `<title>` 后面那几行 `og:` meta |
 | 排行榜（地址、上传成绩、补传、排行榜页面） | `Leaderboard` 一段（`BOARD_URL`、`syncRider()`），排行榜页面在 `openBoard()`；服务器那边在 `server/leaderboard.py`（上限 `MAX_BEST`、频率限制 `RIDER_GAP`、`IP_PER_HOUR`） |
 | 骑手名字和本机成绩（最好、局数、累计、准时率、最近 10 局） | `Riders` 一段（`newRider()`、`loadRiders()`，存在浏览器的 `lunch-rush-players` 里），开始页显示在 `refreshRider()`，一局结束时在 `endGame()` 里记账 |

@@ -291,6 +291,10 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .vs-mid{font-family:var(--f-num);font-weight:600;font-size:14px;color:var(--muted)}
 .vs-invite{margin:0 0 14px}
 .poster{display:block;width:auto;max-width:100%;height:min(450px,50vh);aspect-ratio:2/3;margin:0 auto 12px;border-radius:14px;background:var(--panel-2);object-fit:contain;box-shadow:0 10px 28px rgba(0,0,0,.45)}
+.poster-kinds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0 0 12px}
+.poster-kinds button{height:36px;padding:0 4px;border:0;border-radius:10px;background:var(--panel-2);color:var(--muted);font-family:inherit;font-size:13px;white-space:nowrap;cursor:pointer}
+.poster-kinds button[aria-pressed="true"]{background:rgba(255,194,61,.16);color:var(--signal);font-weight:700}
+.poster-kinds[hidden]{display:none}
 .share-tip{margin:0 0 14px;font-size:13px;line-height:1.6;color:var(--muted);text-align:center}
 .wx-guide{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:flex-end;padding:86px 26px 24px;background:rgba(8,11,15,.86);color:#FFFFFF;text-align:right}
 .wx-guide p{margin:0 0 10px;font-size:22px;font-weight:700;line-height:1.5}
@@ -526,6 +530,9 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 
   <section class="card" id="pShare" hidden>
     <p class="eyebrow">分享给朋友</p>
+    <div class="poster-kinds" id="posterKinds" role="group" aria-label="海报样式">
+      <button type="button" data-f="wx" aria-pressed="true">微信·带二维码</button><button type="button" data-f="xhs" aria-pressed="false">小红书</button><button type="button" data-f="dy" aria-pressed="false">抖音封面</button>
+    </div>
     <img class="poster" id="posterImg" alt="正在画海报…">
     <p class="share-tip" id="shareTip"></p>
     <button class="cta" id="shareCard" type="button">发给好友</button>
@@ -2272,6 +2279,7 @@ function vsResult(){
   else if(me.m<theirs){verdict='对手赢了';why='只差 '+gap+'，下局再来';win=-1;}
   else{verdict='平局！';why='两个人赚得一样多';}
   $('rTitle').textContent=verdict;$('rVsWhy').textContent=why;
+  S.vs.outcome=win;
   $('rVsMe').textContent=fmtMoney(me.m);$('rVsMeD').textContent='送达 '+me.d+' 单';
   $('rVsName').textContent=o.name;$('rVsOpp').textContent=fmtMoney(theirs);
   $('rVsOppD').textContent=o.left&&!o.ended?'中途离开':(o.ended?'':'还在跑 · ')+'送达 '+(o.ended?o.ended.d:o.d)+' 单';
@@ -2352,9 +2360,11 @@ function shareInfo(kind){
   if(kind==='room')return {kind:kind,room:VS.code,url:shareURL(VS.code),
     title:r.name+' 邀请你对战 · 房间 '+VS.code+'｜跑单王',text:'点开就能加入房间，两个人同时开跑，比谁送外卖赚得多。'};
   if(kind==='result'&&mine&&o){
-    const win=mine.m>(o.ended?o.ended.m:o.m)&&!(mine.early&&!mine.rivalFirst);
-    return {kind:kind,url:shareURL(),vs:{me:mine.m,them:o.ended?o.ended.m:o.m,name:o.name,win:win,title:$('rTitle').textContent},
-      title:(win?'我在跑单王对战里赢了 '+o.name:'我在跑单王和 '+o.name+' 对战')+'，你也来试试',text:'外卖骑手小游戏，点开就能玩，不用下载。'};
+    // the poster is read by other people, so it speaks as me ("我赢了"), not to me like the result card ("你赢了")
+    const win=S.vs.outcome||0,them=o.ended?o.ended.m:o.m;
+    const head=win>0?'我赢了 '+o.name+'！':win<0?'这局输给了 '+o.name:o.ended?'和 '+o.name+' 打成平局':'和 '+o.name+' 对战';
+    return {kind:kind,url:shareURL(),vs:{me:mine.m,them:them,name:o.name,win:win,head:head},
+      title:(win>0?'我在跑单王对战里赢了 '+o.name:'我在跑单王和 '+o.name+' 对战')+'，你也来试试',text:'外卖骑手小游戏，点开就能玩，不用下载。'};
   }
   if(kind==='result'){
     const income=Math.round(S.money*10)/10;
@@ -2364,22 +2374,32 @@ function shareInfo(kind){
   return {kind:'game',url:shareURL(),best:r.best,
     title:'跑单王｜午高峰外卖小游戏，来比比谁跑得多',text:'两个半小时接单、送餐、躲交警，看谁赚得多。点开就能玩，不用下载。'};
 }
-let shareNow=null,shareBack='start',posterURL='';
+// Three poster styles: for WeChat with the QR code, and two without it for Xiaohongshu (3:4) and a Douyin cover (9:16),
+// apps that don't scan codes inside pictures and don't like posts pointing elsewhere.
+const POSTER_STYLES={wx:{w:1080,h:1620,file:'跑单王.jpg'},xhs:{w:1080,h:1440,file:'跑单王-小红书.jpg'},dy:{w:1080,h:1920,file:'跑单王-抖音封面.jpg'}};
+let shareNow=null,shareBack='start',posterURL='',posterStyle='wx',posterJob=0;
 function openShare(kind){
   shareBack=Object.keys(panels).find(function(k){return !panels[k].hidden})||'start';
   shareNow=shareInfo(kind);
-  const img=$('posterImg');img.removeAttribute('src');img.alt='正在画海报…';
   $('shareSave').hidden=window.self!==window.top;  // a page shown inside another one (like the Claude preview) can't download
   $('shareCard').textContent=IN_WECHAT?'发给微信好友（对方一点就开）':navigator.share?'发给好友（对方一点就开）':'复制邀请文字';
-  $('shareTip').textContent=IN_WECHAT?'长按上面的海报，可以发给朋友、发朋友圈或保存。朋友长按海报里的二维码就能直接开玩':
-    matchMedia('(pointer:coarse)').matches?'长按上面的海报可以保存，再发到微信或朋友圈。朋友扫海报里的二维码就能直接开玩':
-    '点"保存海报"下载图片，发到微信或朋友圈。朋友扫图里的二维码就能直接开玩';
+  $('posterKinds').hidden=kind==='room';  // a room invitation is for one friend, never for a public post
   showPanel('share');
-  const info=shareNow;
+  drawPoster(kind==='room'?'wx':posterStyle);
+}
+function drawPoster(style){
+  posterStyle=style;
+  const st=POSTER_STYLES[style],img=$('posterImg'),info=shareNow,job=++posterJob,touch=matchMedia('(pointer:coarse)').matches;
+  $('posterKinds').querySelectorAll('button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.f===style));});
+  img.removeAttribute('src');img.alt='正在画海报…';img.style.aspectRatio=st.w+'/'+st.h;posterURL='';
+  $('shareTip').textContent=style!=='wx'?'这张不带二维码，适合发小红书、抖音。'+(touch?'长按图片保存':'点"保存海报"下载')+'，再到 App 里发图就行':
+    IN_WECHAT?'长按上面的海报，可以发给朋友、发朋友圈或保存。朋友长按海报里的二维码就能直接开玩':
+    touch?'长按上面的海报可以保存，再发到微信或朋友圈。朋友扫海报里的二维码就能直接开玩':
+    '点"保存海报"下载图片，发到微信或朋友圈。朋友扫图里的二维码就能直接开玩';
   Poster.ready().then(function(){
-    if(shareNow!==info)return;
-    posterURL=Poster.draw(info).toDataURL('image/jpeg',.92);
-    img.src=posterURL;img.alt='跑单王分享海报，扫码就能开玩';
+    if(job!==posterJob)return;
+    posterURL=Poster.draw(info,style).toDataURL('image/jpeg',.92);
+    img.src=posterURL;img.alt=style==='wx'?'跑单王分享海报，扫码就能开玩':'跑单王分享图';
   });
 }
 // The card: inside WeChat only its own menu can send one, so the page puts the invitation in its title and address and
@@ -2407,12 +2427,13 @@ function wxDone(){
 }
 function savePoster(){
   if(!posterURL)return;
-  const a=document.createElement('a');a.href=posterURL;a.download='跑单王.jpg';document.body.appendChild(a);a.click();a.remove();
+  const a=document.createElement('a');a.href=posterURL;a.download=POSTER_STYLES[posterStyle].file;document.body.appendChild(a);a.click();a.remove();
 }
 $('shareBtn').addEventListener('click',function(){openShare('game');});
 $('shareBtn2').addEventListener('click',function(){openShare('result');});
 $('vsInvite').addEventListener('click',function(){openShare('room');});
 $('shareCard').addEventListener('click',shareCard);
+$('posterKinds').addEventListener('click',function(e){const b=e.target.closest('button');if(b&&b.dataset.f!==posterStyle)drawPoster(b.dataset.f);});
 $('shareSave').addEventListener('click',savePoster);
 $('shareBackBtn').addEventListener('click',function(){showPanel(shareBack);});
 $('wxGuide').addEventListener('click',wxDone);
@@ -2639,7 +2660,8 @@ const Poster=(function(){
     g.fillStyle=color;g.fillText(text,x,y);
   }
   // 1080 x 1620: the artwork on orange, then a dark card with what is being shared and the QR code
-  function draw(info){
+  function draw(info,style){
+    if(style==='xhs'||style==='dy')return drawSocial(info,style);
     const cv=document.createElement('canvas');cv.width=1080;cv.height=1620;
     const g=cv.getContext('2d');
     const bg=g.createLinearGradient(0,1000,1080,0);
@@ -2660,7 +2682,7 @@ const Poster=(function(){
       fit(g,info.room.split('').join(' '),L,1340,MW,150,'600',NUM,'#FFC23D');
       fit(g,'扫码直接进房间，我点"同意"就开打',L,1410,MW,32,'400',FONT,'#C9D2DA');
     }else if(info.vs){
-      fit(g,info.vs.title,L,1150,MW,60,'900',FONT,'#FFFFFF');
+      fit(g,info.vs.head,L,1150,MW,60,'900',FONT,'#FFFFFF');
       fit(g,fmtMoney(info.vs.me)+' : '+fmtMoney(info.vs.them),L,1300,MW,104,'600',NUM,'#FFC23D');
       fit(g,'和 '+info.vs.name+' 对战 · 你也来比比？',L,1380,MW,34,'400',FONT,'#C9D2DA');
     }else if(info.kind==='result'){
@@ -2682,6 +2704,45 @@ const Poster=(function(){
     g.fillText(info.kind==='room'?'长按识别，进我的房间':'长按识别二维码',bx+box/2,by+box+56);
     g.fillStyle='#8D9AA7';g.font='400 26px '+FONT;g.fillText('不用下载，点开就玩',bx+box/2,by+box+98);
     g.textAlign='left';g.fillStyle='#5B6670';g.font='400 26px '+FONT;g.fillText('跑单王 · 免费网页小游戏',L,1572);
+    return cv;
+  }
+  // The picture-only styles (no QR code, no address): big title, the artwork, and one line that makes people curious.
+  // A Douyin profile shows covers cut to their middle 3:4, so on the 9:16 cover everything that matters stays in there.
+  function drawSocial(info,style){
+    const tall=style==='dy',H=tall?1920:1440,cv=document.createElement('canvas');cv.width=1080;cv.height=H;
+    const g=cv.getContext('2d');
+    const bg=g.createLinearGradient(0,H,1080,0);
+    bg.addColorStop(0,'#FF5A2C');bg.addColorStop(.5,'#FF9330');bg.addColorStop(1,'#FFD84F');
+    g.fillStyle=bg;g.fillRect(0,0,1080,H);
+    const top=tall?300:70;
+    g.save();g.translate(90,top+190);g.scale(920/512,920/512);art(g);g.restore();
+    g.textBaseline='alphabetic';g.textAlign='left';g.lineJoin='round';
+    g.font='900 180px '+FONT;g.lineWidth=20;g.strokeStyle=INK;g.strokeText('跑单王',70,top+170);
+    g.fillStyle='#FFFFFF';g.fillText('跑单王',70,top+170);
+    const tw=g.measureText('跑单王').width;
+    g.font='700 38px '+FONT;const tag='午高峰外卖小游戏',gw=g.measureText(tag).width+44;
+    g.fillStyle=INK;rr(g,96+tw,top+100,gw,68,34);g.fill();
+    g.fillStyle='#FFE58A';g.fillText(tag,118+tw,top+147);
+    // the line people read first, on a dark card below the rider
+    const cy=tall?1380:1068,ch=tall?300:262,cx=540;
+    g.fillStyle='rgba(20,26,33,.92)';rr(g,60,cy,960,ch,44);g.fill();
+    g.textAlign='center';
+    const line=function(t,y,size,weight,font,color){let fs=size;g.font=weight+' '+fs+'px '+font;while(fs>18&&g.measureText(t).width>880){fs-=2;g.font=weight+' '+fs+'px '+font;}g.fillStyle=color;g.fillText(t,cx,y);};
+    if(info.vs){
+      line(info.vs.head,cy+78,54,'900',FONT,'#FFFFFF');
+      line(fmtMoney(info.vs.me)+' : '+fmtMoney(info.vs.them),cy+190,104,'600',NUM,'#FFC23D');
+      line('外卖骑手对战 · 你也来比比？',cy+ch-30,34,'400',FONT,'#C9D2DA');
+    }else if(info.kind==='result'){
+      line('我这局跑了',cy+70,46,'700',FONT,'#FFFFFF');
+      line(fmtMoney(info.money),cy+190,124,'600',NUM,'#FFC23D');
+      line(info.rank+' · 送达 '+info.delivered+' 单 · 你能超过我吗？',cy+ch-30,34,'400',FONT,'#C9D2DA');
+    }else{
+      line('午高峰两个半小时',cy+76,46,'700',FONT,'#FFFFFF');
+      line('你能跑多少单？',cy+172,88,'900',FONT,'#FFC23D');
+      line(info.best>0?'我的最好成绩 '+fmtMoney(info.best)+'，来比比':'接单 · 送餐 · 躲交警，比谁赚得多',cy+ch-34,34,'400',FONT,'#C9D2DA');
+    }
+    g.fillStyle='rgba(31,42,58,.72)';g.font='700 30px '+FONT;
+    g.fillText('免费网页小游戏 · 不用下载',cx,cy+ch+58);
     return cv;
   }
   // the poster's fonts come from the web; wait a moment for them, but never for long
