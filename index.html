@@ -2350,6 +2350,7 @@ function openShare(kind){
   shareBack=Object.keys(panels).find(function(k){return !panels[k].hidden})||'start';
   shareNow=shareInfo(kind);
   const img=$('posterImg');img.removeAttribute('src');img.alt='正在画海报…';
+  $('shareSave').hidden=window.self!==window.top;  // a page shown inside another one (like the Claude preview) can't download
   $('shareCard').textContent=IN_WECHAT?'发给微信好友（对方一点就开）':navigator.share?'发给好友（对方一点就开）':'复制邀请文字';
   $('shareTip').textContent=IN_WECHAT?'长按上面的海报，可以发给朋友、发朋友圈或保存。朋友长按海报里的二维码就能直接开玩':
     matchMedia('(pointer:coarse)').matches?'长按上面的海报可以保存，再发到微信或朋友圈。朋友扫海报里的二维码就能直接开玩':
