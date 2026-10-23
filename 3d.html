@@ -1,6 +1,16 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>午高峰跑单 3D 试玩</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="外卖骑手小游戏：午高峰两个半小时，接单、送餐、躲车流和交警，看谁赚得多。点开就能玩，不用下载，还能和朋友对战。">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="跑单王">
+<meta property="og:title" content="跑单王｜午高峰外卖小游戏">
+<meta property="og:description" content="两个半小时接单、送餐、躲交警，看谁赚得多。点开就能玩，不用下载，还能和朋友对战。">
+<meta property="og:image" content="https://qwt1998.github.io/Game/icons/share.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://qwt1998.github.io/Game/">
+<meta name="twitter:card" content="summary_large_image">
 <style>
 /* Layout: dark console shell framing a bright noon city map; order slots above the map on phones, beside it on wide screens */
 :root{
@@ -279,6 +289,15 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .vs-why{grid-column:1/-1;margin:0;font-size:13px;line-height:1.5;color:#C9D2DA;text-align:center}
 .vs-why:empty{display:none}
 .vs-mid{font-family:var(--f-num);font-weight:600;font-size:14px;color:var(--muted)}
+.vs-invite{margin:0 0 14px}
+.poster{display:block;width:auto;max-width:100%;height:min(450px,50vh);aspect-ratio:2/3;margin:0 auto 12px;border-radius:14px;background:var(--panel-2);object-fit:contain;box-shadow:0 10px 28px rgba(0,0,0,.45)}
+.share-tip{margin:0 0 14px;font-size:13px;line-height:1.6;color:var(--muted);text-align:center}
+.wx-guide{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:flex-end;padding:86px 26px 24px;background:rgba(8,11,15,.86);color:#FFFFFF;text-align:right}
+.wx-guide p{margin:0 0 10px;font-size:22px;font-weight:700;line-height:1.5}
+.wx-guide b{color:var(--signal)}
+.wx-guide .wx-sub{font-size:14px;font-weight:400;color:#C9D2DA}
+.wx-guide .ghost{width:120px;margin-top:18px}
+.wx-arrow{position:absolute;top:6px;right:16px;width:80px;height:96px;color:var(--signal)}
 .cta:disabled{filter:grayscale(1);opacity:.55;cursor:default}
 .big{font-family:var(--f-num);font-weight:600;font-size:56px;line-height:1;color:var(--signal);font-variant-numeric:tabular-nums}
 .record{margin:6px 0 0;font-size:13px;color:var(--muted)}
@@ -434,6 +453,7 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
     <button class="cta" id="startBtn" type="button">开跑</button>
     <button class="ghost" id="vsBtn" type="button" hidden>和朋友对战</button>
     <button class="ghost" id="boardBtn" type="button" hidden>排行榜</button>
+    <button class="ghost" id="shareBtn" type="button">分享给朋友</button>
     <details class="history" id="history" hidden><summary id="historySum"></summary><ol id="historyList"></ol></details>
     <div class="install" id="installTip" hidden></div>
   </section>
@@ -470,6 +490,7 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
     <p class="note" id="rNote"></p>
     <button class="cta" id="againBtn" type="button">再跑一局</button>
     <button class="ghost" id="boardBtn2" type="button" hidden>看排行榜</button>
+    <button class="ghost" id="shareBtn2" type="button">分享这局成绩</button>
   </section>
 
   <section class="card" id="pVs" hidden>
@@ -491,6 +512,7 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
       <span class="label">房间号</span>
       <div class="vs-code"><b id="vsCodeShow"></b><button class="ghost" id="vsCopy" type="button" hidden>复制</button></div>
       <p class="vs-tip" id="vsTip"></p>
+      <button class="ghost vs-invite" id="vsInvite" type="button" hidden>邀请朋友：发卡片或海报</button>
       <div class="vs-ask" id="vsAsk" hidden>
         <p><b id="vsAskName"></b> 想加入你的房间</p>
         <div class="vs-ask-btns"><button class="ghost" id="vsNo" type="button">拒绝</button><button class="ghost vs-yes" id="vsYes" type="button">同意</button></div>
@@ -502,6 +524,15 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
     <button class="ghost" id="vsBack" type="button">返回</button>
   </section>
 
+  <section class="card" id="pShare" hidden>
+    <p class="eyebrow">分享给朋友</p>
+    <img class="poster" id="posterImg" alt="正在画海报…">
+    <p class="share-tip" id="shareTip"></p>
+    <button class="cta" id="shareCard" type="button">发给好友</button>
+    <button class="ghost" id="shareSave" type="button">保存海报</button>
+    <button class="ghost" id="shareBackBtn" type="button">返回</button>
+  </section>
+
   <section class="card" id="pBoard" hidden>
     <p class="eyebrow">跑单王排行榜</p>
     <h2>谁跑得最多</h2>
@@ -509,6 +540,13 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
     <ol class="rank-list" id="bList"></ol>
     <button class="cta" id="bBack" type="button">返回</button>
   </section>
+</div>
+
+<div class="wx-guide" id="wxGuide" hidden>
+  <svg class="wx-arrow" viewBox="0 0 80 96" aria-hidden="true"><path d="M8 92C14 52 34 26 66 12" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><path d="M46 6L68 11L60 32" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <p>点右上角 <b>「…」</b><br>选 <b>「发送给朋友」</b></p>
+  <p class="wx-sub">对方收到的是一张卡片，点一下就进游戏</p>
+  <button class="ghost" type="button">好了</button>
 </div>
 
 <script type="module" src="3d/scene.js"></script>
@@ -1913,7 +1951,7 @@ function banner(html,cls){
 }
 
 // ---------- Screens ----------
-const overlay=$('overlay'),panels={start:$('pStart'),pause:$('pPause'),over:$('pOver'),board:$('pBoard'),vs:$('pVs')};
+const overlay=$('overlay'),panels={start:$('pStart'),pause:$('pPause'),over:$('pOver'),board:$('pBoard'),vs:$('pVs'),share:$('pShare')};
 function showPanel(name){
   overlay.hidden=!name;
   Object.keys(panels).forEach(function(k){panels[k].hidden=k!==name});
@@ -2247,6 +2285,7 @@ function vsRender(){
   if(!inRoom)return;
   $('vsCodeShow').textContent=VS.code;
   $('vsAsk').hidden=!VS.ask;$('vsAskName').textContent=VS.ask||'';
+  $('vsInvite').hidden=VS.players.length>=2||VS.playing;
   const list=$('vsPlayers'),mine=VS.players[VS.you],two=VS.players.length===2;
   list.innerHTML='';
   VS.players.forEach(function(p,i){
@@ -2296,8 +2335,362 @@ if(navigator.clipboard&&window.isSecureContext){
 }
 // The button only shows when the versus server answers (and never inside another page, like the Claude preview).
 if(BOARD_ON&&VS_URL&&window.WebSocket){
-  boardFetch('/vs/ping').then(function(d){if(d&&d.ok&&d.v>=2)$('vsBtn').hidden=false;}).catch(function(){});
+  boardFetch('/vs/ping').then(function(d){if(d&&d.ok&&d.v>=2){$('vsBtn').hidden=false;vsFromLink();}}).catch(function(){});
 }
+
+// ---------- Sharing: a card that opens the game in one tap, or a poster whose QR code does the same ----------
+// Both lead to the real site; a room invitation adds ?room=1234, and opening that asks to join the room straight away.
+const SITE='https://qwt1998.github.io/Game/';
+const IN_WECHAT=/MicroMessenger/i.test(navigator.userAgent);
+function shareURL(room){
+  const here=location.hostname==='qwt1998.github.io'?location.origin+location.pathname:SITE;
+  return here+(room?'?room='+room:'');
+}
+// what to say for each place the share button sits
+function shareInfo(kind){
+  const r=me(),o=VS.rival,mine=S&&S.vs&&S.vs.mine;
+  if(kind==='room')return {kind:kind,room:VS.code,url:shareURL(VS.code),
+    title:r.name+' 邀请你对战 · 房间 '+VS.code+'｜跑单王',text:'点开就能加入房间，两个人同时开跑，比谁送外卖赚得多。'};
+  if(kind==='result'&&mine&&o){
+    const win=mine.m>(o.ended?o.ended.m:o.m)&&!(mine.early&&!mine.rivalFirst);
+    return {kind:kind,url:shareURL(),vs:{me:mine.m,them:o.ended?o.ended.m:o.m,name:o.name,win:win,title:$('rTitle').textContent},
+      title:(win?'我在跑单王对战里赢了 '+o.name:'我在跑单王和 '+o.name+' 对战')+'，你也来试试',text:'外卖骑手小游戏，点开就能玩，不用下载。'};
+  }
+  if(kind==='result'){
+    const income=Math.round(S.money*10)/10;
+    return {kind:kind,url:shareURL(),money:income,rank:$('rTitle').textContent,delivered:S.stats.delivered,
+      title:'我这局跑单赚了 '+fmtMoney(income)+'（'+$('rTitle').textContent+'），你能超过我吗？｜跑单王',text:'外卖骑手小游戏，点开就能玩，不用下载。'};
+  }
+  return {kind:'game',url:shareURL(),best:r.best,
+    title:'跑单王｜午高峰外卖小游戏，来比比谁跑得多',text:'两个半小时接单、送餐、躲交警，看谁赚得多。点开就能玩，不用下载。'};
+}
+let shareNow=null,shareBack='start',posterURL='';
+function openShare(kind){
+  shareBack=Object.keys(panels).find(function(k){return !panels[k].hidden})||'start';
+  shareNow=shareInfo(kind);
+  const img=$('posterImg');img.removeAttribute('src');img.alt='正在画海报…';
+  $('shareCard').textContent=IN_WECHAT?'发给微信好友（对方一点就开）':navigator.share?'发给好友（对方一点就开）':'复制邀请文字';
+  $('shareTip').textContent=IN_WECHAT?'长按上面的海报，可以发给朋友、发朋友圈或保存。朋友长按海报里的二维码就能直接开玩':
+    matchMedia('(pointer:coarse)').matches?'长按上面的海报可以保存，再发到微信或朋友圈。朋友扫海报里的二维码就能直接开玩':
+    '点"保存海报"下载图片，发到微信或朋友圈。朋友扫图里的二维码就能直接开玩';
+  showPanel('share');
+  const info=shareNow;
+  Poster.ready().then(function(){
+    if(shareNow!==info)return;
+    posterURL=Poster.draw(info).toDataURL('image/jpeg',.92);
+    img.src=posterURL;img.alt='跑单王分享海报，扫码就能开玩';
+  });
+}
+// The card: inside WeChat only its own menu can send one, so the page puts the invitation in its title and address and
+// points at the menu; elsewhere the phone's share sheet sends it; on a computer the text and address are copied.
+function shareCard(){
+  const info=shareNow;if(!info)return;
+  if(IN_WECHAT){
+    if(!shareCard.title){shareCard.title=document.title;shareCard.path=location.pathname+location.search;}
+    document.title=info.title;
+    try{history.replaceState(null,'',info.url.replace(/^https:\/\/qwt1998\.github\.io/,''));}catch(e){}
+    $('wxGuide').hidden=false;return;
+  }
+  if(navigator.share){navigator.share({title:info.title,text:info.text,url:info.url}).catch(function(){});return;}
+  const t=info.title+'\n'+info.url;
+  (navigator.clipboard&&window.isSecureContext?navigator.clipboard.writeText(t):Promise.reject()).then(function(){
+    $('shareTip').textContent='邀请文字已复制，粘贴到微信发给朋友就行';
+  },function(){$('shareTip').textContent='复制不了，可以保存海报发给朋友';});
+}
+function wxDone(){
+  $('wxGuide').hidden=true;
+  if(shareCard.title){
+    document.title=shareCard.title;shareCard.title='';
+    try{history.replaceState(null,'',shareCard.path);}catch(e){}
+  }
+}
+function savePoster(){
+  if(!posterURL)return;
+  const a=document.createElement('a');a.href=posterURL;a.download='跑单王.jpg';document.body.appendChild(a);a.click();a.remove();
+}
+$('shareBtn').addEventListener('click',function(){openShare('game');});
+$('shareBtn2').addEventListener('click',function(){openShare('result');});
+$('vsInvite').addEventListener('click',function(){openShare('room');});
+$('shareCard').addEventListener('click',shareCard);
+$('shareSave').addEventListener('click',savePoster);
+$('shareBackBtn').addEventListener('click',function(){showPanel(shareBack);});
+$('wxGuide').addEventListener('click',wxDone);
+// opened from an invitation (card or QR code): go straight to asking to join that room
+const LINK_ROOM=(location.search.match(/[?&]room=(\d{4})(?:&|$)/)||[])[1]||null;
+function vsFromLink(){
+  if(!LINK_ROOM||state!=='start')return;
+  try{history.replaceState(null,'',location.pathname);}catch(e){}
+  vsOpen();$('vsCode').value=LINK_ROOM;vsJoin();
+}
+
+// ---------- Share poster: the home-screen icon's artwork, what is being shared, and a QR code ----------
+// The rider and the flying orders are a copy of the drawing in icons/icon.html: when one changes, change the other.
+const Poster=(function(){
+  const INK='#1F2A3A',LW=9;
+  function art(g){
+    g.lineJoin='round';g.lineCap='round';
+    [[0,70,150,10,.45],[40,118,120,8,.35],[0,200,96,12,.6],[0,250,70,9,.5],[0,300,170,14,.85],
+     [20,336,130,10,.7],[0,374,150,16,.9],[46,412,120,10,.75],[0,452,210,12,.55],[230,470,120,8,.4]]
+    .forEach(function(s){g.strokeStyle='rgba(255,255,255,'+s[4]+')';g.lineWidth=s[3];g.beginPath();g.moveTo(s[0],s[1]);g.lineTo(s[0]+s[2],s[1]);g.stroke();});
+    g.fillStyle='rgba(140,40,0,.22)';g.beginPath();g.ellipse(300,432,160,12,0,0,Math.PI*2);g.fill();
+    g.fillStyle='rgba(255,248,232,.92)';
+    [[136,420,22],[104,406,17],[80,424,13],[112,432,12],[58,410,9]].forEach(function(d){circle(g,d[0],d[1],d[2]);g.fill();});
+    [[218,92,-.42,tea],[134,104,-.3,bag],[72,176,-.22,noodles],[60,258,-.32,burger]].forEach(function(t){
+      g.strokeStyle='rgba(255,255,255,.85)';g.lineWidth=6;
+      [-18,2,20].forEach(function(o,i){g.beginPath();g.moveTo(t[0]-46-(i%2)*10,t[1]+o);g.lineTo(t[0]-30,t[1]+o);g.stroke();});
+      g.save();g.translate(t[0],t[1]);g.rotate(t[2]);t[3](g);g.restore();
+    });
+    g.save();g.translate(204,428);g.rotate(-0.13);g.translate(-196,-428);scooter(g);g.restore();
+  }
+  function scooter(g){
+    wheel(g,196,382);wheel(g,398,382);
+    limb(g,[[392,300],[398,382]],12,'#C9D2DB');
+    g.lineWidth=16+LW*2;g.strokeStyle=INK;g.beginPath();g.arc(398,382,56,Math.PI*1.12,Math.PI*1.86);g.stroke();
+    g.lineWidth=16;g.strokeStyle='#F4F6F8';g.beginPath();g.arc(398,382,56,Math.PI*1.12,Math.PI*1.86);g.stroke();
+    shape(g,function(){
+      g.moveTo(140,370);g.lineTo(150,326);g.quadraticCurveTo(160,300,204,298);g.lineTo(318,298);
+      g.quadraticCurveTo(340,300,342,324);g.lineTo(344,344);g.lineTo(362,344);g.lineTo(380,256);g.lineTo(406,256);
+      g.lineTo(390,344);g.quadraticCurveTo(386,370,362,370);g.closePath();
+    },'#F4F6F8');
+    g.fillStyle='#D5DDE5';g.beginPath();g.moveTo(152,352);g.lineTo(336,352);g.lineTo(338,364);g.lineTo(148,364);g.closePath();g.fill();
+    g.fillStyle='rgba(255,250,210,.55)';g.beginPath();g.moveTo(414,276);g.lineTo(512,246);g.lineTo(512,318);g.lineTo(414,292);g.closePath();g.fill();
+    g.fillStyle='#FFE58A';circle(g,412,284,12);g.fill();g.lineWidth=LW*.8;g.strokeStyle=INK;g.stroke();
+    limb(g,[[386,254],[430,240]],12,INK);
+    limb(g,[[134,292],[248,292]],8,INK);
+    shape(g,function(){rr(g,120,166,124,122,18);},'#F2603E');
+    g.fillStyle='#FF8D5E';g.save();rr(g,120,166,124,122,18);g.clip();g.fillRect(120,166,124,30);g.restore();
+    g.lineWidth=LW;g.strokeStyle=INK;rr(g,120,166,124,122,18);g.stroke();
+    g.beginPath();g.moveTo(124,196);g.lineTo(240,196);g.stroke();
+    stopwatch(g,182,244,30);
+    shape(g,function(){rr(g,222,280,104,22,11);},'#2B3A4B');
+    limb(g,[[288,284],[344,288],[352,338]],30,'#3A4A60');
+    shape(g,function(){rr(g,336,330,42,16,8);},INK);
+    shape(g,function(){
+      g.moveTo(326,206);g.quadraticCurveTo(296,186,268,196);g.quadraticCurveTo(250,202,232,186);
+      g.lineTo(238,208);g.quadraticCurveTo(254,224,276,214);g.quadraticCurveTo(298,206,320,222);g.closePath();
+    },'#FFE15A');
+    limb(g,[[292,270],[330,214]],54,'#2F6FDF');
+    g.strokeStyle='#FFE58A';g.lineWidth=8;g.beginPath();g.moveTo(290,236);g.lineTo(330,254);g.stroke();
+    limb(g,[[334,218],[368,240],[398,248]],22,'#2F6FDF');
+    g.fillStyle='#F2D2B6';circle(g,402,248,11);g.fill();g.lineWidth=LW*.8;g.strokeStyle=INK;g.stroke();
+    helmet(g,346,172,38);
+    drop(g,300,124,-.9,11);drop(g,282,148,-1.2,8);
+  }
+  function stopwatch(g,x,y,r){
+    shape(g,function(){rr(g,x-7,y-r-14,14,12,3);},'#FFFFFF');
+    shape(g,function(){circle(g,x,y,r);},'#FFFFFF');
+    g.strokeStyle=INK;g.lineWidth=6;
+    g.beginPath();g.moveTo(x,y);g.lineTo(x,y-r*.62);g.stroke();
+    g.strokeStyle='#E8434A';g.beginPath();g.moveTo(x,y);g.lineTo(x+r*.55,y+r*.2);g.stroke();
+    g.fillStyle=INK;circle(g,x,y,4.5);g.fill();
+    g.strokeStyle='#FFFFFF';g.lineWidth=6;
+    [[1.12,1.38],[1.62,1.88]].forEach(function(a){g.beginPath();g.arc(x,y,r+12,Math.PI*a[0],Math.PI*a[1]);g.stroke();});
+  }
+  function drop(g,x,y,rot,s){
+    g.save();g.translate(x,y);g.rotate(rot);
+    shape(g,function(){g.moveTo(0,-s*1.6);g.quadraticCurveTo(s,-s*.2,s,s*.3);g.arc(0,s*.3,s,0,Math.PI);g.quadraticCurveTo(-s,-s*.2,0,-s*1.6);},'#BFE8FF');
+    g.restore();
+  }
+  function tea(g){
+    limb(g,[[6,-44],[16,-64]],7,INK);
+    shape(g,function(){g.moveTo(-22,-26);g.lineTo(22,-26);g.lineTo(17,30);g.lineTo(-17,30);g.closePath();},'#FFB8CC');
+    g.fillStyle='#F58DAA';g.fillRect(-19,-4,38,12);
+    g.fillStyle=INK;[[-8,20],[2,22],[10,18]].forEach(function(p){circle(g,p[0],p[1],4);g.fill();});
+    shape(g,function(){g.ellipse(0,-28,26,9,0,0,Math.PI*2);},'#FFFFFF');
+  }
+  function bag(g){
+    g.lineWidth=7+LW*2;g.strokeStyle=INK;g.beginPath();g.arc(0,-26,13,Math.PI,0);g.stroke();
+    g.lineWidth=7;g.strokeStyle='#C99A55';g.beginPath();g.arc(0,-26,13,Math.PI,0);g.stroke();
+    shape(g,function(){rr(g,-27,-28,54,58,6);},'#EBC88E');
+    g.fillStyle='#D9AE6B';g.fillRect(-23,-24,46,8);
+    g.fillStyle='#F2603E';circle(g,0,6,9);g.fill();
+  }
+  function noodles(g){
+    limb(g,[[6,-24],[20,-50]],5,'#B5763A');limb(g,[[14,-24],[30,-46]],5,'#B5763A');
+    shape(g,function(){g.moveTo(-28,-22);g.lineTo(28,-22);g.lineTo(21,26);g.lineTo(-21,26);g.closePath();},'#FFFFFF');
+    g.fillStyle='#E9574A';g.fillRect(-24,-6,48,10);
+    g.lineWidth=LW;g.strokeStyle=INK;g.beginPath();g.moveTo(-28,-22);g.lineTo(28,-22);g.lineTo(21,26);g.lineTo(-21,26);g.closePath();g.stroke();
+  }
+  function burger(g){
+    shape(g,function(){g.moveTo(-28,-2);g.quadraticCurveTo(-28,-30,0,-30);g.quadraticCurveTo(28,-30,28,-2);g.closePath();},'#F2A93B');
+    shape(g,function(){rr(g,-30,-2,60,10,5);},'#6BBF59');
+    shape(g,function(){rr(g,-28,8,56,10,5);},'#8B4A2B');
+    shape(g,function(){g.moveTo(-28,18);g.lineTo(28,18);g.quadraticCurveTo(28,30,16,30);g.lineTo(-16,30);g.quadraticCurveTo(-28,30,-28,18);g.closePath();},'#F2A93B');
+    g.fillStyle='#FFF4D6';[[-10,-20],[4,-24],[14,-16]].forEach(function(p){circle(g,p[0],p[1],2.5);g.fill();});
+  }
+  function wheel(g,x,y){
+    g.fillStyle=INK;circle(g,x,y,44);g.fill();
+    g.strokeStyle='rgba(255,255,255,.45)';g.lineWidth=5;
+    [0,1].forEach(function(i){g.beginPath();g.arc(x,y,33,i*Math.PI+.3,i*Math.PI+1.5);g.stroke();});
+    g.fillStyle='#E6EBF0';circle(g,x,y,19);g.fill();
+    g.fillStyle=INK;circle(g,x,y,8);g.fill();
+  }
+  function helmet(g,x,y,r){
+    g.save();circle(g,x,y,r);g.fillStyle='#FFFFFF';g.fill();g.clip();
+    g.fillStyle='#FFC23D';g.fillRect(x-r,y-r,r*2,r*.42);
+    g.fillStyle='#24303C';rr(g,x+2,y-8,r+4,r*.75,10);g.fill();
+    g.fillStyle='rgba(255,255,255,.5)';rr(g,x+12,y-3,14,6,3);g.fill();
+    g.restore();
+    g.lineWidth=LW;g.strokeStyle=INK;circle(g,x,y,r);g.stroke();
+  }
+  function limb(g,pts,w,color){
+    [[w+LW*2,INK],[w,color]].forEach(function(st){
+      g.lineWidth=st[0];g.strokeStyle=st[1];g.beginPath();g.moveTo(pts[0][0],pts[0][1]);
+      for(let i=1;i<pts.length;i++)g.lineTo(pts[i][0],pts[i][1]);g.stroke();
+    });
+  }
+  function shape(g,path,fill){g.beginPath();path();g.fillStyle=fill;g.fill();g.lineWidth=LW;g.strokeStyle=INK;g.stroke();}
+
+  // QR code (byte mode, error correction level M, versions 1-10) -> rows of booleans, true = dark.
+  // Follows the QR standard step by step: data bits, Reed-Solomon error correction, the fixed patterns,
+  // the zigzag placement, and the mask with the lowest penalty.
+  function qrMatrix(text){
+    const ECC=[0,10,16,26,18,24,16,18,22,22,26],BLOCKS=[0,1,1,1,2,2,4,4,4,5,5];
+    const bytes=Array.from(new TextEncoder().encode(text));
+    const rawModules=function(v){let r=(16*v+128)*v+64;if(v>=2){const n=Math.floor(v/7)+2;r-=(25*n-10)*n-55;if(v>=7)r-=36;}return r;};
+    let ver=1;
+    for(;ver<=10;ver++){const cap=Math.floor(rawModules(ver)/8)-ECC[ver]*BLOCKS[ver];if(4+(ver<10?8:16)+bytes.length*8<=cap*8)break;}
+    if(ver>10)return null;
+    const size=ver*4+17,total=Math.floor(rawModules(ver)/8),dataLen=total-ECC[ver]*BLOCKS[ver];
+    // data bits: mode, length, bytes, terminator, padding
+    const bits=[];const put=function(v,n){for(let i=n-1;i>=0;i--)bits.push((v>>>i)&1);};
+    put(4,4);put(bytes.length,ver<10?8:16);bytes.forEach(function(b){put(b,8);});
+    put(0,Math.min(4,dataLen*8-bits.length));while(bits.length%8)bits.push(0);
+    const data=[];for(let i=0;i<bits.length;i+=8){let b=0;for(let j=0;j<8;j++)b=(b<<1)|bits[i+j];data.push(b);}
+    for(let p=0xEC;data.length<dataLen;p^=0xEC^0x11)data.push(p);
+    // Reed-Solomon over GF(256)
+    const mul=function(x,y){let z=0;for(let i=7;i>=0;i--){z=(z<<1)^((z>>>7)*0x11D);z^=((y>>>i)&1)*x;}return z&255;};
+    const deg=ECC[ver],gen=[];for(let i=0;i<deg-1;i++)gen.push(0);gen.push(1);
+    let root=1;
+    for(let i=0;i<deg;i++){for(let j=0;j<deg;j++){gen[j]=mul(gen[j],root);if(j+1<deg)gen[j]^=gen[j+1];}root=mul(root,2);}
+    const rs=function(d){const r=gen.map(function(){return 0});d.forEach(function(b){const f=b^r.shift();r.push(0);gen.forEach(function(c,i){r[i]^=mul(c,f);});});return r;};
+    // split into blocks, add error correction, interleave
+    const nb=BLOCKS[ver],short=nb-total%nb,shortLen=Math.floor(total/nb),blocks=[];
+    for(let i=0,k=0;i<nb;i++){const d=data.slice(k,k+shortLen-deg+(i<short?0:1));k+=d.length;const e=rs(d);if(i<short)d.push(-1);blocks.push(d.concat(e));}
+    const code=[];for(let i=0;i<blocks[0].length;i++)blocks.forEach(function(b,j){if(i!==shortLen-deg||j>=short)code.push(b[i]);});
+    // the grid: fixed patterns first, marked so data and masks skip them
+    const m=[],fixed=[];for(let y=0;y<size;y++){m.push(new Array(size).fill(false));fixed.push(new Array(size).fill(false));}
+    const set=function(x,y,dark){m[y][x]=dark;fixed[y][x]=true;};
+    for(let i=0;i<size;i++){set(6,i,i%2===0);set(i,6,i%2===0);}
+    [[3,3],[size-4,3],[3,size-4]].forEach(function(c){
+      for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++){const x=c[0]+dx,y=c[1]+dy,d=Math.max(Math.abs(dx),Math.abs(dy));if(x>=0&&x<size&&y>=0&&y<size)set(x,y,d!==2&&d!==4);}
+    });
+    if(ver>1){
+      const n=Math.floor(ver/7)+2,step=Math.ceil((ver*4+4)/(n*2-2))*2,pos=[6];
+      for(let p=size-7;pos.length<n;p-=step)pos.splice(1,0,p);
+      pos.forEach(function(ax,i){pos.forEach(function(ay,j){
+        if((i===0&&j===0)||(i===0&&j===n-1)||(i===n-1&&j===0))return;
+        for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)set(ax+dx,ay+dy,Math.max(Math.abs(dx),Math.abs(dy))!==1);
+      });});
+    }
+    const format=function(mask){
+      let d=(0<<3)|mask,r=d;for(let i=0;i<10;i++)r=(r<<1)^((r>>>9)*0x537);
+      const b=((d<<10)|r)^0x5412,bit=function(i){return ((b>>>i)&1)!==0};
+      for(let i=0;i<=5;i++)set(8,i,bit(i));
+      set(8,7,bit(6));set(8,8,bit(7));set(7,8,bit(8));
+      for(let i=9;i<15;i++)set(14-i,8,bit(i));
+      for(let i=0;i<8;i++)set(size-1-i,8,bit(i));
+      for(let i=8;i<15;i++)set(8,size-15+i,bit(i));
+      set(8,size-8,true);
+    };
+    format(0);
+    if(ver>=7){
+      let r=ver;for(let i=0;i<12;i++)r=(r<<1)^((r>>>11)*0x1F25);
+      const b=(ver<<12)|r;
+      for(let i=0;i<18;i++){const d=((b>>>i)&1)!==0,a=size-11+i%3,c=Math.floor(i/3);set(a,c,d);set(c,a,d);}
+    }
+    // zigzag placement, two columns at a time from the bottom right
+    let i=0;
+    for(let right=size-1;right>=1;right-=2){
+      if(right===6)right=5;
+      for(let v=0;v<size;v++)for(let j=0;j<2;j++){
+        const x=right-j,up=((right+1)&2)===0,y=up?size-1-v:v;
+        if(!fixed[y][x]&&i<code.length*8){m[y][x]=((code[i>>>3]>>>(7-(i&7)))&1)!==0;i++;}
+      }
+    }
+    const MASKS=[function(x,y){return (x+y)%2===0},function(x,y){return y%2===0},function(x){return x%3===0},function(x,y){return (x+y)%3===0},
+      function(x,y){return (Math.floor(x/3)+Math.floor(y/2))%2===0},function(x,y){return x*y%2+x*y%3===0},
+      function(x,y){return (x*y%2+x*y%3)%2===0},function(x,y){return ((x+y)%2+x*y%3)%2===0}];
+    const apply=function(k){for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(!fixed[y][x]&&MASKS[k](x,y))m[y][x]=!m[y][x];};
+    // penalty: runs of five or more, 2x2 blocks, finder-like patterns, dark/light balance
+    const penalty=function(){
+      let p=0,dark=0;
+      for(let pass=0;pass<2;pass++)for(let a=0;a<size;a++){
+        let run=1,line=[];
+        for(let b=0;b<size;b++){const v=pass?m[b][a]:m[a][b];line.push(v);if(b&&v===line[b-1]){run++;if(run===5)p+=3;else if(run>5)p++;}else run=1;}
+        const s=line.map(function(v){return v?1:0}).join('');
+        let at=s.indexOf('1011101');
+        while(at>=0){if(s.slice(Math.max(0,at-4),at)==='0000'||s.slice(at+7,at+11)==='0000'||at<4&&s.slice(0,at).indexOf('1')<0||at+11>size&&s.slice(at+7).indexOf('1')<0)p+=40;at=s.indexOf('1011101',at+1);}
+      }
+      for(let y=0;y<size;y++)for(let x=0;x<size;x++){if(m[y][x])dark++;if(x<size-1&&y<size-1){const c=m[y][x];if(m[y][x+1]===c&&m[y+1][x]===c&&m[y+1][x+1]===c)p+=3;}}
+      return p+Math.floor(Math.abs(dark*20-size*size*10)/(size*size))*10;
+    };
+    let best=0,low=Infinity;
+    for(let k=0;k<8;k++){apply(k);format(k);const s=penalty();if(s<low){low=s;best=k;}apply(k);}
+    apply(best);format(best);
+    return m;
+  }
+
+  // text that shrinks until it fits the width it has
+  function fit(g,text,x,y,maxW,size,weight,font,color){
+    let fs=size;g.font=weight+' '+fs+'px '+font;
+    while(fs>18&&g.measureText(text).width>maxW){fs-=2;g.font=weight+' '+fs+'px '+font;}
+    g.fillStyle=color;g.fillText(text,x,y);
+  }
+  // 1080 x 1620: the artwork on orange, then a dark card with what is being shared and the QR code
+  function draw(info){
+    const cv=document.createElement('canvas');cv.width=1080;cv.height=1620;
+    const g=cv.getContext('2d');
+    const bg=g.createLinearGradient(0,1000,1080,0);
+    bg.addColorStop(0,'#FF5A2C');bg.addColorStop(.5,'#FF9330');bg.addColorStop(1,'#FFD84F');
+    g.fillStyle=bg;g.fillRect(0,0,1080,1000);
+    g.save();g.translate(60,12);g.scale(960/512,960/512);art(g);g.restore();
+    g.fillStyle='#141A21';rr(g,0,900,1080,780,56);g.fill();
+    g.textBaseline='alphabetic';g.textAlign='left';
+    g.fillStyle='#FFFFFF';g.font='900 100px '+FONT;g.fillText('跑单王',72,1030);
+    const tw=g.measureText('跑单王').width;
+    g.font='700 30px '+FONT;const tag='午高峰外卖小游戏',gw=g.measureText(tag).width+32;
+    g.fillStyle='rgba(255,194,61,.16)';rr(g,72+tw+24,980,gw,50,25);g.fill();
+    g.fillStyle='#FFC23D';g.fillText(tag,72+tw+40,1016);
+    const L=72,MW=520;
+    if(info.kind==='room'){
+      fit(g,'来和我对战！',L,1150,MW,60,'900',FONT,'#FFFFFF');
+      g.fillStyle='#8D9AA7';g.font='400 32px '+FONT;g.fillText('房间号',L,1214);
+      fit(g,info.room.split('').join(' '),L,1340,MW,150,'600',NUM,'#FFC23D');
+      fit(g,'扫码直接进房间，我点"同意"就开打',L,1410,MW,32,'400',FONT,'#C9D2DA');
+    }else if(info.vs){
+      fit(g,info.vs.title,L,1150,MW,60,'900',FONT,'#FFFFFF');
+      fit(g,fmtMoney(info.vs.me)+' : '+fmtMoney(info.vs.them),L,1300,MW,104,'600',NUM,'#FFC23D');
+      fit(g,'和 '+info.vs.name+' 对战 · 你也来比比？',L,1380,MW,34,'400',FONT,'#C9D2DA');
+    }else if(info.kind==='result'){
+      fit(g,'我这局跑了',L,1150,MW,48,'700',FONT,'#FFFFFF');
+      fit(g,fmtMoney(info.money),L,1300,MW,140,'600',NUM,'#FFC23D');
+      fit(g,info.rank+' · 送达 '+info.delivered+' 单',L,1370,MW,36,'700',FONT,'#FFFFFF');
+      fit(g,'你能超过我吗？',L,1428,MW,34,'400',FONT,'#C9D2DA');
+    }else{
+      fit(g,'午高峰两个半小时',L,1150,MW,48,'700',FONT,'#FFFFFF');
+      fit(g,'你能跑多少单？',L,1260,MW,80,'900',FONT,'#FFC23D');
+      fit(g,info.best>0?'我的最好成绩 '+fmtMoney(info.best)+'，来比比':'接单 · 送餐 · 躲交警，比谁赚得多',L,1340,MW,34,'400',FONT,'#C9D2DA');
+    }
+    // the QR code on a white tile, with a quiet border of four modules or more
+    const m=qrMatrix(info.url),n=m.length,box=380,bx=628,by=1060,cell=Math.floor(box/(n+8)),qs=cell*n,ox=bx+Math.round((box-qs)/2),oy=by+Math.round((box-qs)/2);
+    g.fillStyle='#FFFFFF';rr(g,bx,by,box,box,28);g.fill();
+    g.fillStyle='#111111';
+    for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(m[y][x])g.fillRect(ox+x*cell,oy+y*cell,cell,cell);
+    g.textAlign='center';g.fillStyle='#FFFFFF';g.font='700 32px '+FONT;
+    g.fillText(info.kind==='room'?'长按识别，进我的房间':'长按识别二维码',bx+box/2,by+box+56);
+    g.fillStyle='#8D9AA7';g.font='400 26px '+FONT;g.fillText('不用下载，点开就玩',bx+box/2,by+box+98);
+    g.textAlign='left';g.fillStyle='#5B6670';g.font='400 26px '+FONT;g.fillText('跑单王 · 免费网页小游戏',L,1572);
+    return cv;
+  }
+  // the poster's fonts come from the web; wait a moment for them, but never for long
+  function ready(){
+    const f=document.fonts;if(!f||!f.load)return Promise.resolve();
+    return Promise.race([Promise.all([f.load('900 100px "Noto Sans SC"'),f.load('600 100px "Fredoka"')]).catch(function(){}),
+      new Promise(function(ok){setTimeout(ok,1500);})]);
+  }
+  return {draw:draw,ready:ready,qr:qrMatrix};
+})();
 
 // ---------- Home-screen tip ----------
 // First-time visitors get one line on the start card telling them how to put 跑单王 on their home screen.

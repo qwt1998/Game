@@ -26,6 +26,7 @@
   - `manifest.webmanifest`：桌面名字"跑单王"、图标、全屏打开。
   - `sw.js`：离线用。先联网取最新版，断网才用存下的副本，所以平时改 `index.html` 不用动它；新增需要离线的文件时，加进它的 `FILES` 列表，并把 `CACHE` 里的版本号加一。
   - `icons/`：桌面图标。`icons/icon.html` 用 Canvas 画出图标，改图标就改这个文件，再导出同名的 `icon-512.png`、`icon-192.png`、`apple-touch-icon.png`（180×180）替换旧图。
+  - `icons/share.jpg`：把网址发到 QQ、iPhone 短信、飞书等地方时显示的大图（1200×630），也由 `icons/icon.html` 画出（`drawShare`），导出后替换。页面开头那几行 `og:` 开头的 meta 指向它。
 - `server/`：排行榜和对战程序，跑在仓库主人自己的 Vultr 服务器上（新加坡，Ubuntu 24.04，1 核 1GB 内存），不在 GitHub Pages 上运行，游戏离了它也照常能玩（只是没有排行榜和对战）。
   - `server/leaderboard.py`：只用 Python 自带功能的小网页服务，成绩存在服务器的 SQLite 文件里。收成绩 `/api/sync`，取前 20 名 `/api/top`。
   - `server/versus.py`：对战传话程序，只用 Python 自带功能，什么都不存盘，房间放在内存里。WebSocket（一种一直连着的网页连接）地址是 `/vs`，检查在不在是 `/vs/ping`。它只负责配对（朋友输入房间号申请加入，房主点"同意"才进得来，60 秒没回应就作废）、定好两边同时开跑的时刻、互相转发位置和收入、判定一单是谁先接到的。城市两部手机各算各的：车流各跑各的，单子由同一个随机数算出同一张出单表（`vsPlan()`），所以两边出现的单和下雨时间一模一样。`/vs/ping` 里的 `v` 是服务器版本，游戏要求 `v` 够新才显示对战按钮；改了对战的消息格式就把 `versus.py` 的 `VERSION` 和游戏里检查的数字一起加一。
@@ -69,6 +70,8 @@
 | 逆行和交警 | `isWrongWay()`、`caught()`、`updatePolice()` |
 | 结算评级和点评 | `endGame()`；暂停页"结束这局，保存成绩"按钮（`endBtn`）调用 `endGame(true)`，算"提前收工" |
 | 和朋友对战（开房间、申请加入和房主同意、准备、同时开跑、看到对手、抢同一批单、谁赢、掉线重连） | `Versus` 一段（`VS_VER`、`vsOn()` 收消息、`vsBegin()` 开跑、`vsPlan()` 整局出单表、`vsGone()` 单被对手接走、`vsStep()` 每一帧：钟跟着真实时间走、发自己的位置、`vsResult()` 结算谁赢）；对手画在 `drawRival()`，3D 版在 `3d/scene.js` 的 `rival`、`rivalTag()`；房间页面是 HTML 里的 `#pVs`；服务器那边在 `server/versus.py` |
+| 分享（海报、一点就开的卡片、对战邀请） | `Sharing` 一段：`shareInfo()` 每个地方分享说什么，`openShare()` 打开分享页，`shareCard()` 发卡片（微信里提示点右上角"发送给朋友"，并把网页标题和地址换成邀请；别的浏览器调手机的分享菜单；电脑上复制文字），`LINK_ROOM`、`vsFromLink()`（打开带 `?room=1234` 的地址就自动申请加入这个房间）；海报画在 `Poster` 一段，骑手画是从 `icons/icon.html` 复制的（改画两边一起改），二维码由 `qrMatrix()` 自己生成，不连外网 |
+| 链接预览（QQ、iPhone 短信、飞书里显示的标题、简介、大图） | `<body>` 开头 `<title>` 后面那几行 `og:` meta |
 | 排行榜（地址、上传成绩、补传、排行榜页面） | `Leaderboard` 一段（`BOARD_URL`、`syncRider()`），排行榜页面在 `openBoard()`；服务器那边在 `server/leaderboard.py`（上限 `MAX_BEST`、频率限制 `RIDER_GAP`、`IP_PER_HOUR`） |
 | 骑手名字和本机成绩（最好、局数、累计、准时率、最近 10 局） | `Riders` 一段（`newRider()`、`loadRiders()`，存在浏览器的 `lunch-rush-players` 里），开始页显示在 `refreshRider()`，一局结束时在 `endGame()` 里记账 |
 | 手机触控按键（左下刹车、右下圆形方向盘，按住滑动也能转向） | HTML 里的 `#pad`；样式 `.pad`、`.dpad`（横屏在 `orientation:landscape` 那段）；手势 `padDir()`、`padSteer()` |
@@ -85,6 +88,7 @@
 - 改了玩法数值的，跑完一整局（约 2 分半）看结算是否合理。
 - 改了添加到桌面相关的东西（`manifest.webmanifest`、`sw.js`、`icons/`、`APP_HOST` 一段）的：用本地网页服务器打开（直接双击文件不算数），确认图标和这几个文件都能加载、浏览器没有报"不能安装"，断网后刷新还能打开。
 - 3D 试玩版：用本地网页服务器打开 `3d.html`（无头浏览器加 `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader` 才有 3D），开一局截图，确认控制台没有报错、地图上的文字和 3D 物体对得上。软件渲染很慢，游戏时间会走得比实际慢，属正常。
+- 改了分享的：确认海报里的二维码能扫出正确地址（无头浏览器取出海报图片，用 jsQR 之类的解码器解一遍），对战邀请海报的地址带 `?room=房间号`；模拟微信（把浏览器标识改成带 `MicroMessenger` 的）点"发给微信好友"，要出现右上角指引，网页标题变成邀请文字，关掉后恢复；打开带 `?room=` 的地址要自动申请加入。
 - 改了对战的：在本机跑 `PAODAN_VS_PORT=8799 python3 server/versus.py`，再用 Caddy 照 `install.sh` 里的样子把 `/vs` 转过去，测试副本里的 `BOARD_URL` 临时指向它（不要提交）。开两个无头浏览器，一个开房间、一个输房间号加入，都点准备。要测到：两边的钟一样、两边的出单表一样、一单不会两个人都拿到、互相看得到对方、暂停时钟不停、断网后自己重连、一方关掉页面 30 秒后另一方收到"离开了"、结算两边说法一致（一边赢一边输）、单人模式不受影响。注意：浏览器会拦下"临时替换内容的页面去访问本机端口"，所以测试副本要真的存成文件，再用本地网页服务器打开。
 - 改了排行榜的：在本机用 `PAODAN_DB=临时文件 PAODAN_PORT=8799 python3 server/leaderboard.py serve` 跑一个测试排行榜，把游戏副本里的 `BOARD_URL` 临时指向 `http://127.0.0.1:8799` 测（不要把这个测试地址提交进仓库）。要测到：正常上传、造假成绩被拒、名字里的符号按文字显示、排行榜连不上时游戏照常能玩。改了 `install.sh` 的至少跑 `bash -n` 检查语法。
 

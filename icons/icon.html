@@ -23,6 +23,7 @@ a{display:inline-block;margin-right:12px;color:inherit}
 <main>
   <h1>跑单王 · 桌面图标</h1>
   <p>图标是这里的代码画出来的。改了下面的 drawIcon 以后，用浏览器打开本页，点链接下载新的图片，替换 icons 文件夹里同名的文件。</p>
+  <p>share.jpg 是发链接到 QQ、iPhone 短信、飞书等地方时显示的大图（drawShare）。游戏里的分享海报（index.html 的 Poster 一段）用的是同一幅骑手画，改画的时候两边一起改。</p>
   <div class="row" id="previews"></div>
   <div id="links"></div>
 </main>
@@ -185,6 +186,32 @@ function shape(g,path,fill){g.beginPath();path();g.fillStyle=fill;g.fill();g.lin
 function circle(g,x,y,r){g.beginPath();g.arc(x,y,r,0,Math.PI*2);}
 function rr(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
 
+// The 1200x630 picture shown when the game's address is sent in QQ, iMessage, Feishu and the like
+function drawShare(g){
+  const bg=g.createLinearGradient(0,630,1200,0);
+  bg.addColorStop(0,'#FF5A2C');bg.addColorStop(.5,'#FF9330');bg.addColorStop(1,'#FFD84F');
+  g.fillStyle=bg;g.fillRect(0,0,1200,630);
+  g.save();g.translate(560,0);g.scale(630/512,630/512);
+  g.lineJoin='round';g.lineCap='round';
+  [[0,70,150,10,.45],[40,118,120,8,.35],[0,200,96,12,.6],[0,250,70,9,.5],[0,300,170,14,.85],
+   [20,336,130,10,.7],[0,374,150,16,.9],[46,412,120,10,.75],[0,452,210,12,.55],[230,470,120,8,.4]]
+  .forEach(function(s){g.strokeStyle='rgba(255,255,255,'+s[4]+')';g.lineWidth=s[3];g.beginPath();g.moveTo(s[0],s[1]);g.lineTo(s[0]+s[2],s[1]);g.stroke();});
+  g.fillStyle='rgba(140,40,0,.22)';g.beginPath();g.ellipse(300,432,160,12,0,0,Math.PI*2);g.fill();
+  g.fillStyle='rgba(255,248,232,.92)';
+  [[136,420,22],[104,406,17],[80,424,13],[112,432,12],[58,410,9]].forEach(function(d){circle(g,d[0],d[1],d[2]);g.fill();});
+  trail(g);
+  g.save();g.translate(204,428);g.rotate(-0.13);g.translate(-196,-428);scooter(g);g.restore();
+  g.restore();
+  const F='"Noto Sans SC","PingFang SC","Microsoft YaHei","WenQuanYi Zen Hei",sans-serif';
+  g.textBaseline='alphabetic';g.lineJoin='round';
+  g.font='900 150px '+F;g.lineWidth=16;g.strokeStyle=INK;g.strokeText('跑单王',70,250);g.fillStyle='#FFFFFF';g.fillText('跑单王',70,250);
+  g.font='700 50px '+F;g.fillStyle=INK;g.fillText('午高峰外卖小游戏',76,336);
+  g.font='700 30px '+F;const t='点开就能玩 · 不用下载 · 能和朋友对战',w=g.measureText(t).width+48;
+  g.fillStyle=INK;rr(g,70,388,w,62,31);g.fill();g.fillStyle='#FFE58A';g.fillText(t,94,430);
+}
+function shareCanvas(){const c=document.createElement('canvas');c.width=1200;c.height=630;drawShare(c.getContext('2d'));return c;}
+window.shareJPG=function(){return shareCanvas().toDataURL('image/jpeg',.9);};
+
 function iconCanvas(size){const c=document.createElement('canvas');c.width=c.height=size;drawIcon(c.getContext('2d'),size);return c;}
 // Used by the export script: returns the PNG for one size as a data URL.
 window.iconPNG=function(size){return iconCanvas(size).toDataURL('image/png');};
@@ -196,8 +223,11 @@ const previews=document.getElementById('previews');
   c.style.width=p[0]+'px';c.className=p[1];
   f.appendChild(c);f.appendChild(document.createTextNode(p[2]));previews.appendChild(f);
 });
+(function(){const f=document.createElement('figure'),c=shareCanvas();c.style.width='600px';c.style.borderRadius='12px';
+  f.appendChild(c);f.appendChild(document.createTextNode('链接卡片大图 share.jpg'));previews.appendChild(f);})();
 const links=document.getElementById('links');
 FILES.forEach(function(f){const a=document.createElement('a');a.href=window.iconPNG(f[1]);a.download=f[0];a.textContent='下载 '+f[0];links.appendChild(a);});
+(function(){const a=document.createElement('a');a.href=window.shareJPG();a.download='share.jpg';a.textContent='下载 share.jpg';links.appendChild(a);})();
 </script>
 </body>
 </html>
