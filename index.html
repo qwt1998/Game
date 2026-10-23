@@ -1150,6 +1150,9 @@ function movePlayer(dt){
     if(!moving){atDoor(P.fx,P.fy);return;}
   }else if(S.want&&S.want===OPP[P.dir]){
     let a=P.fx;P.fx=P.tx;P.tx=a;a=P.fy;P.fy=P.ty;P.ty=a;P.t=1-P.t;P.dir=S.want;P.facing=S.want;
+  }else if(S.want&&S.want!==P.dir&&S.t-S.wantAt<1.6&&P.t<.4&&passable(P.fx+DIRS[S.want][0],P.fy+DIRS[S.want][1])){
+    // asked a moment too late for the corner just passed: still take it
+    P.dir=S.want;P.facing=S.want;P.tx=P.fx+DIRS[S.want][0];P.ty=P.fy+DIRS[S.want][1];P.t=0;
   }
   if(S.battery<=0)S.stats.pushTime+=dt;
   const dmg=[1,.8,.62][S.damage];
@@ -2129,7 +2132,7 @@ $('pauseBtn').addEventListener('click',function(){this.blur();if(state==='play')
 // Both phones build the same order list from the race's seed (vsPlan), so the same orders appear at the same
 // moments; whoever reaches one first gets it ('take'), and the server tells the other phone to drop it.
 // Bump VS_VER (to the day's date) whenever the rules change, so an old page and a new one can't race each other.
-const VS_VER='2026-10-23.2';
+const VS_VER='2026-10-23.3';
 const VS_URL=BOARD_URL?BOARD_URL.replace(/^http/,'ws')+'/vs':'';
 const VS={ws:null,code:null,token:null,you:0,players:[],playing:false,ask:null,wait:null,offset:0,best:1e9,rival:null,sentAt:0,retrying:false};
 function vsNow(){return Date.now()+VS.offset;}
@@ -2854,7 +2857,7 @@ document.querySelector('.pd.brake').addEventListener('pointerdown',function(e){e
 const dpad=$('dpad');let padPtr=null;
 function padDir(e){
   const r=dpad.getBoundingClientRect(),x=e.clientX-(r.left+r.width/2),y=e.clientY-(r.top+r.height/2);
-  if(Math.hypot(x,y)<r.width*.11)return null;  // dead spot in the middle
+  if(Math.hypot(x,y)<r.width*.07)return null;  // small dead spot in the middle
   return Math.abs(x)>Math.abs(y)?(x>0?'right':'left'):(y>0?'down':'up');
 }
 // the knob follows the thumb but stays inside the base; letting go springs it back to the middle
@@ -2873,6 +2876,8 @@ function padSteer(e){
 dpad.addEventListener('pointerdown',function(e){e.preventDefault();padPtr=e.pointerId;try{dpad.setPointerCapture(e.pointerId)}catch(err){}dpad.dataset.on='';dpad.classList.add('held');padKnob(e);padSteer(e);});
 dpad.addEventListener('pointermove',function(e){if(e.pointerId===padPtr){padKnob(e);padSteer(e);}});
 function padRelease(e){if(e.pointerId!==padPtr)return;padPtr=null;delete dpad.dataset.on;dpad.classList.remove('held');padKnob(null);}
+// while the thumb holds the stick, the turn it points to stays wanted (like holding a key down), however far off the next corner is
+function padHold(){if(padPtr!==null&&S&&S.want&&S.want===dpad.dataset.on)S.wantAt=S.t;}
 dpad.addEventListener('pointerup',padRelease);
 dpad.addEventListener('pointercancel',padRelease);
 let sw=null;
@@ -2911,6 +2916,7 @@ setTimeout(function(){staticDirty=true},4000);
 // ---------- Loop ----------
 function frame(now){
   const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
+  padHold();
   if(S.vs&&(state==='play'||state==='paused'))vsStep(dt);
   else if(state==='play')update(dt);
   draw(now);hud();

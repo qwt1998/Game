@@ -76,7 +76,7 @@
 | 链接预览（QQ、iPhone 短信、飞书里显示的标题、简介、大图） | `<body>` 开头 `<title>` 后面那几行 `og:` meta（地址和大图用服务器那份，国内的 App 才取得到） |
 | 排行榜（地址、上传成绩、补传、排行榜页面） | `Leaderboard` 一段（`BOARD_URL`、`syncRider()`），排行榜页面在 `openBoard()`；服务器那边在 `server/leaderboard.py`（上限 `MAX_BEST`、频率限制 `RIDER_GAP`、`IP_PER_HOUR`） |
 | 骑手名字和本机成绩（最好、局数、累计、准时率、最近 10 局） | `Riders` 一段（`newRider()`、`loadRiders()`，存在浏览器的 `lunch-rush-players` 里），开始页显示在 `refreshRider()`，一局结束时在 `endGame()` 里记账 |
-| 手机触控按键（左下圆形刹车、右下摇杆：按住圆钮往哪推就往哪拐，不松手能连续换方向） | HTML 里的 `#pad`；样式 `.pad`、`.dpad`（竖屏在 `orientation:portrait` 那段，横屏在 `orientation:landscape` 那段）；手势 `padDir()`、`padSteer()`，圆钮跟手在 `padKnob()` |
+| 手机触控按键（左下圆形刹车、右下摇杆：按住圆钮往哪推就往哪拐，不松手能连续换方向） | HTML 里的 `#pad`；样式 `.pad`、`.dpad`（竖屏在 `orientation:portrait` 那段，横屏在 `orientation:landscape` 那段）；手势 `padDir()`、`padSteer()`，圆钮跟手在 `padKnob()`，按住不放时一直记着要拐的方向在 `padHold()`；刚过路口才推也算数在 `movePlayer()` |
 | 背景音乐 | `Sound` 模块里的 `PROG`（和弦）、`HOOK`（主旋律）、`stepAt()`（编曲） |
 | 音效 | `Sound` 模块里的 `FX` |
 | 添加到桌面（接上图标、离线、桌面名字） | 脚本开头的 `APP_HOST` 一段，以及 `manifest.webmanifest` |
