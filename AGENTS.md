@@ -28,7 +28,7 @@
   - `icons/`：桌面图标。`icons/icon.html` 用 Canvas 画出图标，改图标就改这个文件，再导出同名的 `icon-512.png`、`icon-192.png`、`apple-touch-icon.png`（180×180）替换旧图。
 - `server/`：排行榜和对战程序，跑在仓库主人自己的 Vultr 服务器上（新加坡，Ubuntu 24.04，1 核 1GB 内存），不在 GitHub Pages 上运行，游戏离了它也照常能玩（只是没有排行榜和对战）。
   - `server/leaderboard.py`：只用 Python 自带功能的小网页服务，成绩存在服务器的 SQLite 文件里。收成绩 `/api/sync`，取前 20 名 `/api/top`。
-  - `server/versus.py`：对战传话程序，只用 Python 自带功能，什么都不存盘，房间放在内存里。WebSocket（一种一直连着的网页连接）地址是 `/vs`，检查在不在是 `/vs/ping`。它只负责配对、定好两边同时开跑的时刻、互相转发位置和收入；城市（车、单子）两部手机各算各的。
+  - `server/versus.py`：对战传话程序，只用 Python 自带功能，什么都不存盘，房间放在内存里。WebSocket（一种一直连着的网页连接）地址是 `/vs`，检查在不在是 `/vs/ping`。它只负责配对（朋友输入房间号申请加入，房主点"同意"才进得来，60 秒没回应就作废）、定好两边同时开跑的时刻、互相转发位置和收入；城市（车、单子）两部手机各算各的。
   - `server/install.sh`：一键安装和更新两个程序（`paodan` 和 `paodan-vs` 两个服务），用 Caddy 配加密连接（https），`/vs` 开头的转给对战程序（本机 8788 端口），其余转给排行榜（8787）。没有域名时用"IP.sslip.io"当网址。
   - 游戏里的 `BOARD_URL` 是排行榜地址，空着就不显示排行榜。服务器的登录信息不进仓库，也不要向仓库主人要。
 - 3D 试玩版（`qwt1998.github.io/Game/3d.html`）：玩法、按键、记录、排行榜和正式版完全一样，只有地图画成斜着看的 3D 城市。
@@ -68,7 +68,7 @@
 | 撞车惩罚 | `crash()` |
 | 逆行和交警 | `isWrongWay()`、`caught()`、`updatePolice()` |
 | 结算评级和点评 | `endGame()`；暂停页"结束这局，保存成绩"按钮（`endBtn`）调用 `endGame(true)`，算"提前收工" |
-| 和朋友对战（开房间、加入、准备、同时开跑、看到对手、掉线重连） | `Versus` 一段（`VS_VER`、`vsOn()` 收消息、`vsBegin()` 开跑、`vsStep()` 每一帧：钟跟着真实时间走、发自己的位置）；对手画在 `drawRival()`，3D 版在 `3d/scene.js` 的 `rival`、`rivalTag()`；房间页面是 HTML 里的 `#pVs`；服务器那边在 `server/versus.py` |
+| 和朋友对战（开房间、申请加入和房主同意、准备、同时开跑、看到对手、掉线重连） | `Versus` 一段（`VS_VER`、`vsOn()` 收消息、`vsBegin()` 开跑、`vsStep()` 每一帧：钟跟着真实时间走、发自己的位置）；对手画在 `drawRival()`，3D 版在 `3d/scene.js` 的 `rival`、`rivalTag()`；房间页面是 HTML 里的 `#pVs`；服务器那边在 `server/versus.py` |
 | 排行榜（地址、上传成绩、补传、排行榜页面） | `Leaderboard` 一段（`BOARD_URL`、`syncRider()`），排行榜页面在 `openBoard()`；服务器那边在 `server/leaderboard.py`（上限 `MAX_BEST`、频率限制 `RIDER_GAP`、`IP_PER_HOUR`） |
 | 骑手名字和本机成绩（最好、局数、累计、准时率、最近 10 局） | `Riders` 一段（`newRider()`、`loadRiders()`，存在浏览器的 `lunch-rush-players` 里），开始页显示在 `refreshRider()`，一局结束时在 `endGame()` 里记账 |
 | 手机触控按键（左下刹车、右下圆形方向盘，按住滑动也能转向） | HTML 里的 `#pad`；样式 `.pad`、`.dpad`（横屏在 `orientation:landscape` 那段）；手势 `padDir()`、`padSteer()` |

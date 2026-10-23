@@ -261,6 +261,12 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .vs-players .st{flex:none;font-size:12.5px;color:var(--muted)}
 .vs-players .st.on{color:var(--ok);font-weight:700}
 .vs-players li.wait{justify-content:center;color:var(--muted)}
+.vs-ask{margin:0 0 12px;padding:12px;border-radius:12px;background:rgba(163,230,53,.1);box-shadow:0 0 0 1px rgba(163,230,53,.45) inset}
+.vs-ask p{margin:0 0 10px;font-size:14px;line-height:1.5}
+.vs-ask b{color:var(--vs)}
+.vs-ask-btns{display:flex;gap:8px}
+.vs-ask-btns .ghost{margin:0}
+.vs-ask-btns .vs-yes{background:var(--vs);color:#1A1F25;font-weight:700}
 .vs-msg{min-height:1.4em;margin:10px 0 0;font-size:13px;line-height:1.5;color:#FDA4AF;text-align:center}
 .cta:disabled{filter:grayscale(1);opacity:.55;cursor:default}
 .big{font-family:var(--f-num);font-weight:600;font-size:56px;line-height:1;color:var(--signal);font-variant-numeric:tabular-nums}
@@ -452,10 +458,18 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
         <button class="ghost" id="vsJoin" type="button">加入</button>
       </div>
     </div>
+    <div id="vsWait" hidden>
+      <p class="vs-tip" id="vsWaitTxt"></p>
+      <button class="ghost" id="vsCancel" type="button">取消申请</button>
+    </div>
     <div id="vsRoom" hidden>
       <span class="label">房间号</span>
       <div class="vs-code"><b id="vsCodeShow"></b><button class="ghost" id="vsCopy" type="button" hidden>复制</button></div>
       <p class="vs-tip" id="vsTip"></p>
+      <div class="vs-ask" id="vsAsk" hidden>
+        <p><b id="vsAskName"></b> 想加入你的房间</p>
+        <div class="vs-ask-btns"><button class="ghost" id="vsNo" type="button">拒绝</button><button class="ghost vs-yes" id="vsYes" type="button">同意</button></div>
+      </div>
       <ul class="vs-players" id="vsPlayers"></ul>
       <button class="cta" id="vsReady" type="button">准备</button>
     </div>
@@ -1999,13 +2013,14 @@ $('resumeBtn').addEventListener('click',resume);
 $('pauseBtn').addEventListener('click',function(){this.blur();if(state==='play')pause();else if(state==='paused')resume();});
 
 // ---------- Versus: two riders on two phones racing the same 2½ hours ----------
-// server/versus.py (on the leaderboard server, under /vs) pairs the phones, sets one start moment for both and
+// server/versus.py (on the leaderboard server, under /vs) pairs the phones (a friend types the room number and the
+// owner has to say yes), sets one start moment for both and
 // passes each rider's position and income to the other. Each phone runs its own city; in a race the game clock
 // follows real time on both phones instead of stopping, so neither rider can get ahead by pausing.
 // Bump VS_VER (to the day's date) whenever the rules change, so an old page and a new one can't race each other.
 const VS_VER='2026-10-23';
 const VS_URL=BOARD_URL?BOARD_URL.replace(/^http/,'ws')+'/vs':'';
-const VS={ws:null,code:null,token:null,you:0,players:[],playing:false,offset:0,best:1e9,rival:null,sentAt:0,retrying:false};
+const VS={ws:null,code:null,token:null,you:0,players:[],playing:false,ask:null,wait:null,offset:0,best:1e9,rival:null,sentAt:0,retrying:false};
 function vsNow(){return Date.now()+VS.offset;}
 function vsLive(){return !!VS.ws&&VS.ws.readyState===1;}
 function vsSend(o){if(vsLive())VS.ws.send(JSON.stringify(o));}
@@ -2031,12 +2046,16 @@ function vsOn(m){
   if(m.t==='pong'){
     const rtt=Date.now()-m.c;
     if(rtt>=0&&rtt<VS.best){VS.best=rtt;VS.offset=m.s-(m.c+rtt/2);}
+  }else if(m.t==='wait'){
+    if(!VS.code){VS.wait={code:m.code,host:m.host,secs:m.secs};vsMsg('');vsRender();}
   }else if(m.t==='room'){
-    VS.code=m.code;VS.token=m.token;VS.you=m.you;VS.players=m.players||[];VS.playing=!!m.playing;
+    if(m.ask&&m.ask!==VS.ask)Sound.play('order');
+    VS.code=m.code;VS.token=m.token;VS.you=m.you;VS.players=m.players||[];VS.playing=!!m.playing;VS.ask=m.ask||null;VS.wait=null;
     vsRender();
   }else if(m.t==='error'){
     if(S.vs&&state!=='over'&&m.code==='gone'){VS.code=null;if(o)o.left=true;banner('回不到对战房间了，这局接着按单人跑','alert');return;}
-    if(m.code==='gone'){VS.code=null;vsRender();}
+    if(m.code==='gone'&&!VS.wait){VS.code=null;}
+    VS.wait=null;vsRender();
     vsMsg(m.msg);
   }else if(m.t==='start'){
     if(VS.best>=1e9)VS.offset=m.now-Date.now();
@@ -2062,7 +2081,7 @@ function vsOn(m){
 // The connection dropped. Mid-race keep trying for 30 seconds (the server holds the seat that long).
 function vsLost(){
   if(S.vs&&state!=='over'&&VS.code){vsRetry();return;}
-  if(VS.code){VS.code=null;VS.players=[];vsRender();vsMsg('和对战服务器断开了，重新开房间吧');}
+  if(VS.code||VS.wait){VS.code=null;VS.wait=null;VS.ask=null;VS.players=[];vsRender();vsMsg('和对战服务器断开了，再试一次吧');}
 }
 function vsRetry(){
   if(VS.retrying)return;
@@ -2122,10 +2141,12 @@ function vsResultLine(){
 }
 // The room card: open a room or type a friend's room number, then both press 准备.
 function vsRender(){
-  const inRoom=!!VS.code;
-  $('vsMenu').hidden=inRoom;$('vsRoom').hidden=!inRoom;
+  const inRoom=!!VS.code,waiting=!inRoom&&!!VS.wait;
+  $('vsMenu').hidden=inRoom||waiting;$('vsWait').hidden=!waiting;$('vsRoom').hidden=!inRoom;
+  if(waiting)$('vsWaitTxt').textContent='已经申请加入 '+VS.wait.code+' 号房间，等房主「'+VS.wait.host+'」点同意…（最多等 '+VS.wait.secs+' 秒）';
   if(!inRoom)return;
   $('vsCodeShow').textContent=VS.code;
+  $('vsAsk').hidden=!VS.ask;$('vsAskName').textContent=VS.ask||'';
   const list=$('vsPlayers'),mine=VS.players[VS.you],two=VS.players.length===2;
   list.innerHTML='';
   VS.players.forEach(function(p,i){
@@ -2137,7 +2158,7 @@ function vsRender(){
   if(!two){const li=document.createElement('li');li.className='wait';li.textContent='等朋友加入…';list.appendChild(li);}
   const rb=$('vsReady');
   rb.textContent=mine&&mine.ready?'取消准备':'准备';rb.disabled=VS.playing||!two;
-  $('vsTip').textContent=VS.playing?'上一局还没跑完，等两个人都收工再准备':!two?'把房间号发给朋友，让他在开始页点"和朋友对战"，输入房间号加入':
+  $('vsTip').textContent=VS.playing?'上一局还没跑完，等两个人都收工再准备':!two?'把房间号发给朋友，让他在开始页点"和朋友对战"输入房间号。他申请加入时，你点"同意"他才进得来':
     mine&&mine.ready?'等朋友准备，两个人都准备好就同时开跑':'两个人都点"准备"，倒数 3 秒后同时开跑';
 }
 function vsOpen(){
@@ -2158,8 +2179,12 @@ $('vsCreate').addEventListener('click',function(){vsAct({t:'create',v:VS_VER,nam
 $('vsJoin').addEventListener('click',vsJoin);
 $('vsCode').addEventListener('keydown',function(e){if(e.key==='Enter')vsJoin();});
 $('vsReady').addEventListener('click',function(){const mine=VS.players[VS.you];vsSend({t:'ready',on:!(mine&&mine.ready)});});
+$('vsYes').addEventListener('click',function(){vsSend({t:'answer',ok:true});});
+$('vsNo').addEventListener('click',function(){vsSend({t:'answer',ok:false});VS.ask=null;vsRender();});
+$('vsCancel').addEventListener('click',function(){vsSend({t:'cancel'});VS.wait=null;vsMsg('');vsRender();});
 $('vsBack').addEventListener('click',function(){
-  if(VS.code){vsSend({t:'leave'});VS.code=null;VS.players=[];vsMsg('');vsRender();return;}
+  if(VS.code){vsSend({t:'leave'});VS.code=null;VS.players=[];VS.ask=null;vsMsg('');vsRender();return;}
+  if(VS.wait){vsSend({t:'cancel'});VS.wait=null;vsMsg('');vsRender();return;}
   if(VS.ws){const ws=VS.ws;VS.ws=null;try{ws.close()}catch(e){}}
   refreshRider();showPanel('start');
 });

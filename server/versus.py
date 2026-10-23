@@ -9,6 +9,7 @@ Caddy 把 https://网址/vs 转到这里（本机 8788 端口，不直接对外�
   /vs        WebSocket（一种一直连着的网页连接）：开房间、加入、准备、开跑、互相转发位置
 
 两部手机各算各的城市，这里只做三件事：配对、定好同时开跑的时刻、把一方的位置和收入转给另一方。
+配对靠房间号：一个人开房间，朋友输入房间号申请加入，房主点"同意"才进得来。
 """
 import asyncio
 import base64
@@ -32,6 +33,7 @@ IDLE = 45                 # seconds without hearing from a phone before it count
 SEAT_HOLD = 30            # seconds a dropped player can come back into the same game
 ROOM_LIFE = 3 * 3600      # rooms are cleared out after this long whatever happens
 COUNTDOWN = 3.5           # seconds from "both ready" to the start, so both phones can count down together
+ASK_WAIT = int(os.environ.get('PAODAN_VS_ASK_WAIT', '60'))   # seconds the room owner has to answer a join request
 DIRS = ('up', 'down', 'left', 'right')
 HALTS = ('', 'crash', 'police', 'swap', 'repair')
 
@@ -67,6 +69,7 @@ class Conn:
         self.reader, self.writer, self.ip = reader, writer, ip
         self.player = None
         self.room = None
+        self.asking = None      # the room this phone has asked to join, while it waits for the owner's answer
         self.seen = time.time()
         self.window = (0, 0)   # (second, messages in it)
         self.open = True
@@ -153,6 +156,7 @@ class Room:
         self.created = time.time()
         self.start_at = None    # server time (ms) the current game starts, while one is on
         self.seed = 0
+        self.ask = None         # the one join request waiting for the owner: {'conn', 'name', 'at'}
 
     def other(self, p):
         return next((q for q in self.players if q is not p), None)
@@ -160,6 +164,7 @@ class Room:
     def state_for(self, p):
         return {'t': 'room', 'code': self.code, 'you': self.players.index(p), 'token': p.token,
                 'playing': self.start_at is not None,
+                'ask': self.ask['name'] if self.ask and p is self.players[0] else None,
                 'players': [{'name': q.name, 'ready': q.ready, 'here': q.conn is not None} for q in self.players]}
 
     def tell_all(self):
@@ -181,6 +186,24 @@ def new_code():
     return None
 
 
+def end_ask(room, why=None):
+    """Clears the room's join request, telling the person who asked why (code, message) if they are still waiting."""
+    ask, room.ask = room.ask, None
+    if ask and ask['conn'].asking is room:
+        ask['conn'].asking = None
+        if why:
+            ask['conn'].send({'t': 'error', 'code': why[0], 'msg': why[1]})
+
+
+def cancel_ask(conn):
+    """The phone stops waiting for an answer (it gave up, asked somewhere else or went away)."""
+    room = conn.asking
+    conn.asking = None
+    if room and room.ask and room.ask['conn'] is conn:
+        room.ask = None
+        room.tell_all()
+
+
 def leave(conn, quiet=False):
     """The phone leaves its room for good (or its seat timed out)."""
     room, p = conn.room, conn.player
@@ -197,6 +220,7 @@ def drop(room, p, quiet=False):
     if not quiet:
         room.tell_other(p, {'t': 'left', 'name': p.name})
     if not room.players:
+        end_ask(room, ('gone', '房主离开了，房间没了'))
         rooms.pop(room.code, None)
         return
     if room.start_at is not None and all(q.finished for q in room.players):
@@ -216,6 +240,7 @@ def handle(conn, msg):
     if t == 'ping':
         conn.send({'t': 'pong', 'c': num(msg.get('c'), 0, 1e16), 's': now_ms()})
     elif t == 'create':
+        cancel_ask(conn)
         leave(conn)
         hour_ago = time.time() - 3600
         made = [x for x in created_per_ip.get(conn.ip, []) if x > hour_ago]
@@ -242,11 +267,18 @@ def handle(conn, msg):
             return conn.send({'t': 'error', 'code': 'full', 'msg': '这个房间已经有两个人了'})
         if room.start_at is not None:
             return conn.send({'t': 'error', 'code': 'busy', 'msg': '这个房间正在比赛，等这局跑完再进'})
+        if room.ask and room.ask['conn'] is not conn and room.ask['conn'].open:
+            return conn.send({'t': 'error', 'code': 'busy', 'msg': '房主正在处理别人的加入申请，等一会儿再试'})
+        # nobody gets in on the number alone: the owner is asked first
+        if conn.asking is not room:
+            cancel_ask(conn)
         leave(conn)
-        p = Player(clean_name(msg.get('name')))
-        room.players.append(p)
-        seat(conn, room, p)
+        room.ask = {'conn': conn, 'name': clean_name(msg.get('name')), 'at': time.time()}
+        conn.asking = room
+        conn.send({'t': 'wait', 'code': room.code, 'host': room.players[0].name, 'secs': ASK_WAIT})
         room.tell_all()
+    elif t == 'cancel':
+        cancel_ask(conn)
     elif t == 'rejoin':
         room = rooms.get(str(msg.get('code', ''))[:8])
         p = next((q for q in room.players if q.token == msg.get('token')), None) if room else None
@@ -277,6 +309,22 @@ def handle(conn, msg):
                 q.conn.send({'t': 'start', 'at': room.start_at, 'seed': room.seed, 'now': now_ms()})
         else:
             room.tell_all()
+    elif t == 'answer':
+        ask = room.ask
+        if not ask or p is not room.players[0]:
+            return
+        if not msg.get('ok'):
+            end_ask(room, ('refused', '房主没有同意你加入'))
+            return room.tell_all()
+        end_ask(room)
+        joiner = ask['conn']
+        if not joiner.open or len(room.players) >= 2 or room.start_at is not None:
+            return room.tell_all()
+        leave(joiner)
+        q = Player(ask['name'])
+        room.players.append(q)
+        seat(joiner, room, q)
+        room.tell_all()
     elif t == 'pos':
         if room.start_at is None:
             return
@@ -376,6 +424,7 @@ async def serve(reader, writer):
 
 def lost(conn):
     """The connection ended. Mid-game the seat is held for SEAT_HOLD seconds; otherwise the player leaves."""
+    cancel_ask(conn)
     room, p = conn.room, conn.player
     if not room or not p or p.conn is not conn:
         return
@@ -402,7 +451,11 @@ async def housekeeping():
             for p in list(room.players):
                 if p.conn is None and p.gone_at and t - p.gone_at > SEAT_HOLD:
                     drop(room, p)
+            if room.ask and t - room.ask['at'] > ASK_WAIT:
+                end_ask(room, ('timeout', '房主一直没回应，等会儿再试'))
+                room.tell_all()
             if t - room.created > ROOM_LIFE and room.code in rooms:
+                end_ask(room, ('gone', '房间开得太久，已经关了'))
                 for p in list(room.players):
                     if p.conn:
                         p.conn.send({'t': 'error', 'code': 'gone', 'msg': '房间开得太久，已经关了'})
