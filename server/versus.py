@@ -8,7 +8,8 @@ Caddy 把 https://网址/vs 转到这里（本机 8788 端口，不直接对外�
   /vs/ping   检查程序在不在；游戏靠它决定显不显示"和朋友对战"按钮
   /vs        WebSocket（一种一直连着的网页连接）：开房间、加入、准备、开跑、互相转发位置
 
-两部手机各算各的城市，这里只做三件事：配对、定好同时开跑的时刻、把一方的位置和收入转给另一方。
+两部手机各算各的城市（同一个随机数算出同一批单），这里只做四件事：配对、定好同时开跑的时刻、
+把一方的位置和收入转给另一方、判定一单是谁先接到的。
 配对靠房间号：一个人开房间，朋友输入房间号申请加入，房主点"同意"才进得来。
 """
 import asyncio
@@ -21,6 +22,7 @@ import secrets
 import struct
 import time
 
+VERSION = 2               # what /vs/ping reports; the game only offers versus when the server is new enough for it
 HOST = os.environ.get('PAODAN_VS_HOST', '127.0.0.1')
 PORT = int(os.environ.get('PAODAN_VS_PORT', '8788'))
 
@@ -157,6 +159,7 @@ class Room:
         self.start_at = None    # server time (ms) the current game starts, while one is on
         self.seed = 0
         self.ask = None         # the one join request waiting for the owner: {'conn', 'name', 'at'}
+        self.taken = {}         # order number -> the player who got it first, for the race that is on
 
     def other(self, p):
         return next((q for q in self.players if q is not p), None)
@@ -291,7 +294,8 @@ def handle(conn, msg):
         seat(conn, room, p)
         room.tell_all()
         if room.start_at is not None:
-            conn.send({'t': 'start', 'at': room.start_at, 'seed': room.seed, 'now': now_ms(), 'again': True})
+            conn.send({'t': 'start', 'at': room.start_at, 'seed': room.seed, 'now': now_ms(), 'again': True,
+                       'taken': [k for k, q in room.taken.items() if q is not p]})
             room.tell_other(p, {'t': 'back'})
     elif not room or not p:
         return
@@ -302,6 +306,7 @@ def handle(conn, msg):
         if len(room.players) == 2 and all(q.ready and q.conn for q in room.players):
             room.start_at = now_ms() + int(COUNTDOWN * 1000)
             room.seed = random.randint(1, 2 ** 31 - 1)
+            room.taken = {}
             for q in room.players:
                 q.ready = q.finished = False
             room.tell_all()
@@ -334,6 +339,17 @@ def handle(conn, msg):
                             'f': f if f in DIRS else 'down', 'm': round(num(msg.get('m'), -9999, 9999), 1),
                             'd': int(num(msg.get('d'), 0, 999)), 'b': int(num(msg.get('b'), 0, 3)),
                             'h': h if h in HALTS else ''})
+    elif t == 'take':
+        # both phones show the same numbered orders; the first one to report a pickup keeps it
+        k = msg.get('id')
+        if room.start_at is None or isinstance(k, bool) or not isinstance(k, int) or not 0 <= k < 1000:
+            return
+        first = room.taken.get(k)
+        if first is None:
+            room.taken[k] = p
+            room.tell_other(p, {'t': 'taken', 'id': k})
+        elif first is not p:
+            conn.send({'t': 'lost', 'id': k})
     elif t == 'end':
         if room.start_at is None:
             return
@@ -382,7 +398,7 @@ async def serve(reader, writer):
         ip = hdr['x-forwarded-for'].split(',')[0].strip()
 
     if path.rstrip('/') == '/vs/ping':
-        return await http_reply(writer, 200, {'ok': True, 'name': '跑单王对战', 'rooms': len(rooms)})
+        return await http_reply(writer, 200, {'ok': True, 'name': '跑单王对战', 'v': VERSION, 'rooms': len(rooms)})
     if path.rstrip('/') != '/vs' or hdr.get('upgrade', '').lower() != 'websocket' or not hdr.get('sec-websocket-key'):
         return await http_reply(writer, 404, {'error': '没有这个地址'})
     if conns_per_ip.get(ip, 0) >= MAX_CONN_PER_IP:

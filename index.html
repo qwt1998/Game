@@ -268,6 +268,17 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
 .vs-ask-btns .ghost{margin:0}
 .vs-ask-btns .vs-yes{background:var(--vs);color:#1A1F25;font-weight:700}
 .vs-msg{min-height:1.4em;margin:10px 0 0;font-size:13px;line-height:1.5;color:#FDA4AF;text-align:center}
+.vs-result{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px;margin:14px 0 0;padding:12px 10px;border-radius:14px;background:var(--panel-2)}
+.vs-side{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;padding:6px 4px;border-radius:10px}
+.vs-side span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:700;color:#C9D2DA}
+.vs-side b{font-family:var(--f-num);font-weight:600;font-size:26px;line-height:1.1;color:var(--vs);font-variant-numeric:tabular-nums}
+.vs-side.me b{color:var(--signal)}
+.vs-side small{font-size:12px;color:var(--muted)}
+.vs-side.win{box-shadow:0 0 0 2px var(--ok) inset}
+.vs-side.win span::after{content:" · 胜";color:var(--ok)}
+.vs-why{grid-column:1/-1;margin:0;font-size:13px;line-height:1.5;color:#C9D2DA;text-align:center}
+.vs-why:empty{display:none}
+.vs-mid{font-family:var(--f-num);font-weight:600;font-size:14px;color:var(--muted)}
 .cta:disabled{filter:grayscale(1);opacity:.55;cursor:default}
 .big{font-family:var(--f-num);font-weight:600;font-size:56px;line-height:1;color:var(--signal);font-variant-numeric:tabular-nums}
 .record{margin:6px 0 0;font-size:13px;color:var(--muted)}
@@ -439,7 +450,12 @@ button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
     <h2 id="rTitle">熟练骑手</h2>
     <div class="big" id="rIncome">¥0</div>
     <p class="record" id="rRecord"></p>
-    <p class="board-line" id="rVs" hidden></p>
+    <div class="vs-result" id="rVs" hidden>
+      <p class="vs-why" id="rVsWhy"></p>
+      <div class="vs-side me"><span>你</span><b id="rVsMe"></b><small id="rVsMeD"></small></div>
+      <span class="vs-mid">VS</span>
+      <div class="vs-side rival"><span id="rVsName"></span><b id="rVsOpp"></b><small id="rVsOppD"></small></div>
+    </div>
     <p class="board-line" id="rBoard" hidden></p>
     <dl class="stats" id="rStats"></dl>
     <p class="note" id="rNote"></p>
@@ -934,18 +950,18 @@ function isMoving(){const P=S.player;return P.tx!==P.fx||P.ty!==P.fy;}
 
 function lightPhase(i){const c=(S.t+(i?6:0))%12;return c<5.5?'h':c<6?'-':c<11.5?'v':'-';}
 
+// Order rules, shared by a normal game and the fixed order list of a versus race (vsPlan)
+const PIN_MAX=5,PIN_LIFE=18,PIN_LIFE_FIRST=24,TIP_ODDS=.18;
+function pinFee(dist,peak,rain){let fee=3.5+dist*.2;if(peak)fee+=2;if(rain)fee+=1.5;return Math.round(fee*2)/2;}
+function pinGap(t,r){return (t>=PEAK_A&&t<PEAK_B?2.2:4)*(.75+r*.5);}
 function spawnPin(initial){
   const free=shops.filter(function(s){return !S.pins.some(function(p){return p.shop===s})});
-  if(!free.length||S.pins.length>=5)return;
+  if(!free.length||S.pins.length>=PIN_MAX)return;
   const shop=free[(Math.random()*free.length)|0];
   const dest=customers[(Math.random()*customers.length)|0];
   const dist=distFrom(shop)[dest.door[0]+dest.door[1]*W];
   if(dist<0)return;
-  let fee=3.5+dist*.2;
-  if(isPeak())fee+=2;
-  if(isRain())fee+=1.5;
-  fee=Math.round(fee*2)/2;
-  S.pins.push({shop:shop,dest:dest,dist:dist,fee:fee,born:S.t,expires:S.t+(initial?24:18)});
+  S.pins.push({shop:shop,dest:dest,dist:dist,fee:pinFee(dist,isPeak(),isRain()),born:S.t,expires:S.t+(initial?PIN_LIFE_FIRST:PIN_LIFE)});
   if(!initial)Sound.play('order');
 }
 
@@ -972,7 +988,8 @@ function atDoor(x,y){
     if(S.active.length>=BOX){if(toastOnce('full','箱子满了，先送一单',C.bad))Sound.play('full');return;}
     const pin=S.pins.splice(i,1)[0];
     const slot=[0,1,2].find(function(s){return !S.active.some(function(o){return o.slot===s})});
-    S.active.push({shop:p,dest:pin.dest,fee:pin.fee,dist:pin.dist,taken:S.t,deadline:S.t+pin.dist/3+5,slot:slot});
+    S.active.push({shop:p,dest:pin.dest,fee:pin.fee,dist:pin.dist,taken:S.t,deadline:S.t+pin.dist/3+5,slot:slot,pinId:pin.id,tip:pin.tip});
+    if(S.vs)vsSend({t:'take',id:pin.id});
     float('取餐 → '+pin.dest.name,C.o[slot]);
     Sound.play('pickup');
   }else if(p.type==='station'){
@@ -991,7 +1008,7 @@ function atDoor(x,y){
     mine.forEach(function(o){
       const on=S.t<=o.deadline;
       const pay=on?o.fee:Math.round(o.fee)/2;
-      const tip=on&&Math.random()<.18?2:0;
+      const tip=on&&(o.tip!=null?o.tip:Math.random()<TIP_ODDS)?2:0;
       S.money+=pay+tip;S.stats.delivered++;
       if(on)S.stats.onTime++;else S.stats.late++;
       if(tip)S.stats.tips++;
@@ -1262,7 +1279,8 @@ function update(dt){
   Sound.setIntensity(isPeak()||S.t>=140?1:0);
   if(S.spot>0)S.spot-=dt;
   S.active.forEach(function(o){if(!o.overdue&&S.t>o.deadline){o.overdue=1;Sound.play('overdue');float('订单 '+(o.slot+1)+' 超时了',C.bad);}});
-  if(S.t>=S.nextSpawn){spawnPin(false);S.nextSpawn=S.t+(isPeak()?2.2:4)*(.75+Math.random()*.5);}
+  if(S.vs)vsSpawn();
+  else if(S.t>=S.nextSpawn){spawnPin(false);S.nextSpawn=S.t+pinGap(S.t,Math.random());}
   S.pins=S.pins.filter(function(p){if(S.t>p.expires){S.stats.missed++;return false;}return true;});
   updateCars(dt);
   if(S.invuln>0)S.invuln-=dt;
@@ -1937,11 +1955,11 @@ function endGame(early){
   state='over';
   Sound.stopMusic(1.2);Sound.setRain(false);Sound.play('end',.2);
   const st=S.stats,income=Math.round(S.money*10)/10,und=S.active.length,rate=st.delivered?st.onTime/st.delivered:0;
-  if(S.vs)vsSend({t:'end',m:income,d:st.delivered,early:!!early});
+  if(S.vs){S.vs.mine={m:income,d:st.delivered,early:!!early,rivalFirst:!!(VS.rival&&(VS.rival.ended||VS.rival.left))};vsSend({t:'end',m:income,d:st.delivered,early:!!early});}
   const rank=income>=150?'单王':income>=100?'金牌骑手':income>=50?'熟练骑手':'新手骑手';
   $('rTitle').textContent=rank;$('rIncome').textContent=fmtMoney(income);
   const r=me(),best=r.best,rec=$('rRecord');
-  $('rEyebrow').textContent=(early?fmtClock(START_MIN+Math.floor(S.t))+' · 提前收工':'13:30 · 收工')+' · '+r.name;
+  $('rEyebrow').textContent=(early?fmtClock(START_MIN+Math.floor(S.t))+' · 提前收工':'13:30 · 收工')+(S.vs?' · 对战':'')+' · '+r.name;
   if(income>best&&income>0){r.best=income;rec.textContent='新纪录！';rec.className='record new';}
   else{rec.textContent=best>0?'最好成绩 '+fmtMoney(best):'';rec.className='record';}
   r.games++;r.income=Math.round((r.income+income)*10)/10;r.delivered+=st.delivered;r.onTime+=st.onTime;
@@ -1967,7 +1985,7 @@ function endGame(early){
   else if(st.delivered<10)note='准时率不错，可以再大胆一点，箱子空着就是亏。';
   else note='节奏很稳，也守规矩。下一局午高峰多叠几单，冲一冲单王。';
   $('rNote').textContent=note;
-  vsResultLine();
+  vsResult();
   $('againBtn').textContent=S.vs?'回到对战房间':'再跑一局';
   refreshRider();showPanel('over');
 }
@@ -2017,8 +2035,10 @@ $('pauseBtn').addEventListener('click',function(){this.blur();if(state==='play')
 // owner has to say yes), sets one start moment for both and
 // passes each rider's position and income to the other. Each phone runs its own city; in a race the game clock
 // follows real time on both phones instead of stopping, so neither rider can get ahead by pausing.
+// Both phones build the same order list from the race's seed (vsPlan), so the same orders appear at the same
+// moments; whoever reaches one first gets it ('take'), and the server tells the other phone to drop it.
 // Bump VS_VER (to the day's date) whenever the rules change, so an old page and a new one can't race each other.
-const VS_VER='2026-10-23';
+const VS_VER='2026-10-23.2';
 const VS_URL=BOARD_URL?BOARD_URL.replace(/^http/,'ws')+'/vs':'';
 const VS={ws:null,code:null,token:null,you:0,players:[],playing:false,ask:null,wait:null,offset:0,best:1e9,rival:null,sentAt:0,retrying:false};
 function vsNow(){return Date.now()+VS.offset;}
@@ -2059,23 +2079,30 @@ function vsOn(m){
     vsMsg(m.msg);
   }else if(m.t==='start'){
     if(VS.best>=1e9)VS.offset=m.now-Date.now();
-    if(m.again){if(S.vs&&S.vs.at===m.at&&state!=='over'){if(o)o.away=false;banner('重新连上了，接着跑');}return;}
+    if(m.again){
+      if(S.vs&&S.vs.at===m.at&&state!=='over'){if(o)o.away=false;(m.taken||[]).forEach(function(id){vsGone(id,true);});banner('重新连上了，接着跑');}
+      return;
+    }
     vsBegin(m);
   }else if(!S.vs||!o){
     if(m.t==='left')vsMsg(m.name+' 离开了房间');
   }else if(m.t==='opp'){
     o.x=m.x;o.y=m.y;o.f=m.f;o.m=m.m;o.d=m.d;o.b=m.b;o.h=m.h;o.away=false;
+  }else if(m.t==='taken'){
+    if(state!=='over')vsGone(m.id,false);
+  }else if(m.t==='lost'){
+    if(state!=='over')vsGone(m.id,true);
   }else if(m.t==='away'){
     o.away=true;if(state!=='over')banner('<b>'+esc(o.name)+'</b> 掉线了，等他回来…');
   }else if(m.t==='back'){
     o.away=false;if(state!=='over')banner('<b>'+esc(o.name)+'</b> 回来了');
   }else if(m.t==='left'){
     o.left=true;if(state!=='over')banner('<b>'+esc(o.name)+'</b> 离开了对战，你接着跑');
-    vsResultLine();
+    vsResult();
   }else if(m.t==='oppEnd'){
     o.ended={m:m.m,d:m.d,early:!!m.early};
     if(m.early&&state!=='over')banner('<b>'+esc(o.name)+'</b> 提前收工了：'+fmtMoney(m.m));
-    vsResultLine();
+    vsResult();
   }
 }
 // The connection dropped. Mid-race keep trying for 30 seconds (the server holds the seat that long).
@@ -2098,11 +2125,52 @@ function vsRetry(){
     });
   })();
 }
+// The race's whole order list, worked out from the seed the same way on both phones: same shops, customers, fees
+// and times, and the same rain. A shop counts as busy until its order would have run out, picked up or not,
+// so a pickup on one phone never changes what appears next on the other.
+function vsPlan(seed){
+  let a=seed>>>0;
+  const rnd=function(){a=(a+0x6D2B79F5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return ((t^(t>>>14))>>>0)/4294967296;};
+  const rainStart=70+rnd()*28,rainEnd=rainStart+24,list=[];let live=[];
+  function add(t,first){
+    live=live.filter(function(q){return q.expires>t});
+    const free=shops.filter(function(sh){return !live.some(function(q){return q.shop===sh})});
+    if(!free.length||live.length>=PIN_MAX)return;
+    const shop=free[(rnd()*free.length)|0],dest=customers[(rnd()*customers.length)|0],tip=rnd()<TIP_ODDS;
+    const dist=distFrom(shop)[dest.door[0]+dest.door[1]*W];
+    if(dist<0)return;
+    const q={id:list.length,shop:shop,dest:dest,dist:dist,fee:pinFee(dist,t>=PEAK_A&&t<PEAK_B,t>=rainStart&&t<rainEnd),born:t,expires:t+(first?PIN_LIFE_FIRST:PIN_LIFE),tip:tip};
+    list.push(q);live.push(q);
+  }
+  for(let i=0;i<3;i++)add(0,true);
+  for(let t=3;t<DAY;t+=pinGap(t,rnd()))add(t,false);
+  return {rainStart:rainStart,rainEnd:rainEnd,pins:list};
+}
+// puts every listed order whose time has come on the map, unless the rival already took it
+function vsSpawn(){
+  const v=S.vs,list=v.plan.pins;
+  while(v.next<list.length&&list[v.next].born<=S.t){
+    const q=list[v.next++];
+    if(v.gone[q.id]||S.t>q.expires)continue;
+    S.pins.push(Object.assign({},q));
+    if(q.born>0)Sound.play('order');
+  }
+}
+// the rival took this order: it goes from my map (and if I had grabbed it too, the server said they were first)
+function vsGone(id,mine){
+  S.vs.gone[id]=1;
+  const i=S.pins.findIndex(function(q){return q.id===id});
+  if(i>=0){const q=S.pins.splice(i,1)[0];S.floats.push({text:'被对手接走',color:C.vs,x:q.shop.door[0]+.5,y:q.shop.door[1]-.2,life:1.6,dur:1.6});}
+  const k=mine?S.active.findIndex(function(o){return o.pinId===id}):-1;
+  if(k>=0){S.active.splice(k,1);float('被对手抢先了一步',C.bad);Sound.play('full');}
+}
 // Both riders are ready: the race starts at the same server moment on both phones.
 function vsBegin(m){
-  const rival=VS.players[1-VS.you];
+  const rival=VS.players[1-VS.you],plan=vsPlan(m.seed);
   startGame();
-  S.vs={at:m.at,seed:m.seed};
+  S.vs={at:m.at,seed:m.seed,plan:plan,next:0,gone:{},mine:null};
+  S.pins=[];S.rainStart=plan.rainStart;S.rainEnd=plan.rainEnd;
+  vsSpawn();
   VS.rival={name:rival?rival.name:'对手',x:4.5,y:11.5,sx:4.5,sy:11.5,f:'down',m:0,d:0,b:0,h:'',away:false,left:false,ended:null};
   VS.sentAt=0;
   banner('对手是 <b>'+esc(VS.rival.name)+'</b>，绿色的车就是他。倒数完一起开跑！');
@@ -2131,13 +2199,26 @@ function vsHud(){
   box.hidden=!(left>-1);
   if(left>-1){setText($('vsCountN'),'vsn',left>0?String(Math.ceil(left)):'开跑！');setText($('vsCountT'),'vst',left>0?'对手：'+(o?o.name:''):'');}
 }
-function vsResultLine(){
-  const line=$('rVs'),o=VS.rival;
-  if(!S.vs||!o||state!=='over'){line.hidden=true;return;}
-  line.hidden=false;
-  if(o.ended)line.textContent='对手 '+o.name+(o.ended.early?' 提前收工：':' 收工：')+fmtMoney(o.ended.m)+'，送达 '+o.ended.d+' 单';
-  else if(o.left)line.textContent='对手 '+o.name+' 中途离开了';
-  else line.textContent='对手 '+o.name+' 还在跑，目前 '+fmtMoney(o.m);
+// The result card of a race: who won, and both riders' income side by side. More money wins; whoever quits early
+// or leaves first loses. If the rival is still finishing (their last message is on its way), it says so and updates.
+function vsResult(){
+  const box=$('rVs'),o=VS.rival,me=S.vs&&S.vs.mine;
+  if(!me||!o||state!=='over'){box.hidden=true;return;}
+  box.hidden=false;
+  const theirs=o.ended?o.ended.m:o.m,gap=fmtMoney(Math.abs(me.m-theirs));
+  let verdict,why='',win=0;
+  if(me.early&&!me.rivalFirst){verdict='对手赢了';why='你提前收工了，这局算对手赢';win=-1;}
+  else if(o.ended&&o.ended.early){verdict='你赢了！';why='对手提前收工了';win=1;}
+  else if(o.left&&!o.ended){verdict='你赢了！';why='对手中途离开了';win=1;}
+  else if(!o.ended)verdict='等对手收工…';
+  else if(me.m>theirs){verdict='你赢了！';why='比对手多赚 '+gap;win=1;}
+  else if(me.m<theirs){verdict='对手赢了';why='只差 '+gap+'，下局再来';win=-1;}
+  else{verdict='平局！';why='两个人赚得一样多';}
+  $('rTitle').textContent=verdict;$('rVsWhy').textContent=why;
+  $('rVsMe').textContent=fmtMoney(me.m);$('rVsMeD').textContent='送达 '+me.d+' 单';
+  $('rVsName').textContent=o.name;$('rVsOpp').textContent=fmtMoney(theirs);
+  $('rVsOppD').textContent=o.left&&!o.ended?'中途离开':(o.ended?'':'还在跑 · ')+'送达 '+(o.ended?o.ended.d:o.d)+' 单';
+  box.querySelector('.me').classList.toggle('win',win>0);box.querySelector('.rival').classList.toggle('win',win<0);
 }
 // The room card: open a room or type a friend's room number, then both press 准备.
 function vsRender(){
@@ -2196,7 +2277,7 @@ if(navigator.clipboard&&window.isSecureContext){
 }
 // The button only shows when the versus server answers (and never inside another page, like the Claude preview).
 if(BOARD_ON&&VS_URL&&window.WebSocket){
-  boardFetch('/vs/ping').then(function(d){if(d&&d.ok)$('vsBtn').hidden=false;}).catch(function(){});
+  boardFetch('/vs/ping').then(function(d){if(d&&d.ok&&d.v>=2)$('vsBtn').hidden=false;}).catch(function(){});
 }
 
 // ---------- Home-screen tip ----------
