@@ -1,0 +1,12 @@
+# 服务器上那份游戏要同步的文件（sync-site.sh 每 10 分钟照这张单子从 GitHub 取一次）。
+# 游戏新增了要在网页上用到的文件，就加一行在这里。
+index.html
+3d.html
+3d/scene.js
+vendor/three-lite.js
+manifest.webmanifest
+sw.js
+icons/icon-192.png
+icons/icon-512.png
+icons/apple-touch-icon.png
+icons/share.jpg

@@ -5,6 +5,7 @@
 ## 怎么玩
 
 - **在线玩（可以直接分享）**：<https://qwt1998.github.io/Game/> ，任何人点开就能玩，不用登录
+- **国内手机打不开上面那个时**：<https://66-42-50-99.sslip.io/> ，放在自己服务器上的同一份游戏（3D 版是 `/3d.html`），每 10 分钟自动从 GitHub 同步；游戏里分享出去的二维码和链接都指向这一份
 - **3D 试玩版**：<https://qwt1998.github.io/Game/3d.html> ，同一个游戏，地图换成斜着看的 3D 城市；成绩和正式版记在一起
 - **Claude 上的版本**：<https://claude.ai/artifact/FTjmnJ6vQMNN4nr5QSYrYA>（默认只有自己能打开）
 - **本地玩**：下载 `index.html`，双击用浏览器打开就行，不需要安装任何东西

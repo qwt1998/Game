@@ -30,7 +30,8 @@
 - `server/`：排行榜和对战程序，跑在仓库主人自己的 Vultr 服务器上（新加坡，Ubuntu 24.04，1 核 1GB 内存），不在 GitHub Pages 上运行，游戏离了它也照常能玩（只是没有排行榜和对战）。
   - `server/leaderboard.py`：只用 Python 自带功能的小网页服务，成绩存在服务器的 SQLite 文件里。收成绩 `/api/sync`，取前 20 名 `/api/top`。
   - `server/versus.py`：对战传话程序，只用 Python 自带功能，什么都不存盘，房间放在内存里。WebSocket（一种一直连着的网页连接）地址是 `/vs`，检查在不在是 `/vs/ping`。它只负责配对（朋友输入房间号申请加入，房主点"同意"才进得来，60 秒没回应就作废）、定好两边同时开跑的时刻、互相转发位置和收入、判定一单是谁先接到的。城市两部手机各算各的：车流各跑各的，单子由同一个随机数算出同一张出单表（`vsPlan()`），所以两边出现的单和下雨时间一模一样。`/vs/ping` 里的 `v` 是服务器版本，游戏要求 `v` 够新才显示对战按钮；改了对战的消息格式就把 `versus.py` 的 `VERSION` 和游戏里检查的数字一起加一。
-  - `server/install.sh`：一键安装和更新两个程序（`paodan` 和 `paodan-vs` 两个服务），用 Caddy 配加密连接（https），`/vs` 开头的转给对战程序（本机 8788 端口），其余转给排行榜（8787）。没有域名时用"IP.sslip.io"当网址。
+  - `server/install.sh`：一键安装和更新两个程序（`paodan` 和 `paodan-vs` 两个服务），用 Caddy 配加密连接（https），`/vs` 开头的转给对战程序（本机 8788 端口），`/api/` 开头的转给排行榜（8787），其余的是游戏本身。没有域名时用"IP.sslip.io"当网址。
+  - 游戏在服务器上也有一份：<https://66-42-50-99.sslip.io/>（3D 版是 `/3d.html`），给国内连不上 GitHub 的手机用。`server/sync-site.sh` 每 10 分钟（`paodan-site.timer`）照 `server/site-files.txt` 这张单子从 GitHub Pages 取一次最新文件，所以推送后大约 20 分钟内自动同步，不用登录服务器。**网页新用到一个文件，要把它加进 `server/site-files.txt`**，不然服务器那份缺文件。分享出去的二维码和链接都指向这一份（`shareURL()`）。
   - 游戏里的 `BOARD_URL` 是排行榜地址，空着就不显示排行榜。服务器的登录信息不进仓库，也不要向仓库主人要。
 - 3D 试玩版（`qwt1998.github.io/Game/3d.html`）：玩法、按键、记录、排行榜和正式版完全一样，只有地图画成斜着看的 3D 城市。
   - `3d.html` 是**生成出来的**，不要手改。它由 `3d/make.py` 照着 `index.html` 生成，只在几个固定的地方做了替换。**每次改完 `index.html` 都运行一次 `python3 3d/make.py`**，再一起提交，两个版本才会一致。`make.py` 找不到要替换的地方时会报错停下，这时改 `make.py` 里对应的那一行。
@@ -40,7 +41,7 @@
 
 ## 发布
 
-- 仓库是公开的，`main` 分支根目录通过 GitHub Pages 发布到 <https://qwt1998.github.io/Game/>，推送后自动更新。
+- 仓库是公开的，`main` 分支根目录通过 GitHub Pages 发布到 <https://qwt1998.github.io/Game/>，推送后自动更新。仓库主人服务器上的那份 <https://66-42-50-99.sslip.io/> 大约 20 分钟内自动跟上。
 - Claude 上还有一份同样的版本：<https://claude.ai/artifact/FTjmnJ6vQMNN4nr5QSYrYA>。改完后用同一份 `index.html` 更新这个链接，两边保持一致。当前环境更新不了的话，在汇报里说明，不要另建新链接。Claude 副本只需要 `index.html`；"添加到桌面"只在 GitHub Pages 上生效，页面被嵌在别的网页里（比如 Claude 预览）时会自动跳过。
 - 仓库公开，不要往里放密码、密钥或个人信息。
 - 改了 `server/` 里的东西：推送后，请仓库主人在 Vultr 后台的服务器控制台里再运行一次安装命令 `curl -fsSL https://qwt1998.github.io/Game/server/install.sh | bash`，就会更新到最新版，成绩不会丢。只改 `index.html` 不用动服务器。
@@ -71,7 +72,7 @@
 | 结算评级和点评 | `endGame()`；暂停页"结束这局，保存成绩"按钮（`endBtn`）调用 `endGame(true)`，算"提前收工" |
 | 和朋友对战（开房间、申请加入和房主同意、准备、同时开跑、看到对手、抢同一批单、谁赢、掉线重连） | `Versus` 一段（`VS_VER`、`vsOn()` 收消息、`vsBegin()` 开跑、`vsPlan()` 整局出单表、`vsGone()` 单被对手接走、`vsStep()` 每一帧：钟跟着真实时间走、发自己的位置、`vsResult()` 结算谁赢）；对手画在 `drawRival()`，3D 版在 `3d/scene.js` 的 `rival`、`rivalTag()`；房间页面是 HTML 里的 `#pVs`；服务器那边在 `server/versus.py` |
 | 分享（海报、一点就开的卡片、对战邀请） | `Sharing` 一段：`shareInfo()` 每个地方分享说什么，`openShare()` 打开分享页，`shareCard()` 发卡片（微信里提示点右上角"发送给朋友"，并把网页标题和地址换成邀请；别的浏览器调手机的分享菜单；电脑上复制文字），`LINK_ROOM`、`vsFromLink()`（打开带 `?room=1234` 的地址就自动申请加入这个房间）；海报画在 `Poster` 一段，骑手画是从 `icons/icon.html` 复制的（改画两边一起改），二维码由 `qrMatrix()` 自己生成，不连外网；三种样式在 `POSTER_STYLES`：微信版带二维码（`draw()`），小红书 3:4 和抖音封面 9:16 不带二维码（`drawSocial()`，抖音封面的重要内容要留在中间 3:4 的范围里）；海报是给别人看的，用第一人称（"我赢了"），对战邀请只出微信版 |
-| 链接预览（QQ、iPhone 短信、飞书里显示的标题、简介、大图） | `<body>` 开头 `<title>` 后面那几行 `og:` meta |
+| 链接预览（QQ、iPhone 短信、飞书里显示的标题、简介、大图） | `<body>` 开头 `<title>` 后面那几行 `og:` meta（地址和大图用服务器那份，国内的 App 才取得到） |
 | 排行榜（地址、上传成绩、补传、排行榜页面） | `Leaderboard` 一段（`BOARD_URL`、`syncRider()`），排行榜页面在 `openBoard()`；服务器那边在 `server/leaderboard.py`（上限 `MAX_BEST`、频率限制 `RIDER_GAP`、`IP_PER_HOUR`） |
 | 骑手名字和本机成绩（最好、局数、累计、准时率、最近 10 局） | `Riders` 一段（`newRider()`、`loadRiders()`，存在浏览器的 `lunch-rush-players` 里），开始页显示在 `refreshRider()`，一局结束时在 `endGame()` 里记账 |
 | 手机触控按键（左下刹车、右下圆形方向盘，按住滑动也能转向） | HTML 里的 `#pad`；样式 `.pad`、`.dpad`（横屏在 `orientation:landscape` 那段）；手势 `padDir()`、`padSteer()` |
